@@ -1,0 +1,18 @@
+README for NeuroWombat 0.0.1
+
+NeuroWombat is an artificial neural network reliability simulator. 
+It's primary purpose is to gain a better understanding of the 
+behavior of neural networks made of unreliable components.
+
+Program allows user to create, train and simulate a lot of neural 
+network architectures via scripting.
+
+NeuroWombat is written in C++ and uses Lua as embedded scripting 
+language.
+
+This program is free software. It is published under GNU General 
+Public License v3 or later. See the license for more details.
+
+
+Copyright (C) 2009 Andrew Timashov
+
