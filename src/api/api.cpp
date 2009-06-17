@@ -436,7 +436,7 @@ int setPotentials( lua_State * L )
    while ( lua_next( L, 3 ) != 0 )
       {
       unsigned int key = lua_tointeger( L, -2 ) - 1;
-      if ( key < limit ) wires->setPotential( key, lua_tonumber( L, -1 ) );
+      if ( key < limit ) wires->setPotential( baseIndex + key, lua_tonumber( L, -1 ) );
       lua_pop( L, 1 );
       }
 
