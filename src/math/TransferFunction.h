@@ -22,12 +22,15 @@
 #define TRANSFERFUNCTION_H
 
 
+#include "kernel/KernelObject.h"
+
+
 /***************************************************************************
  *   TransferFunction abstract class declaration                           *
  ***************************************************************************/
 
 
-class TransferFunction
+class TransferFunction : public KernelObject
    {
    public:
       TransferFunction();

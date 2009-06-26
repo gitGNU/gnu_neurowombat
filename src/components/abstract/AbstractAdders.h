@@ -38,7 +38,7 @@ class AbstractAdders : public KernelObject
 
       unsigned int count() const;
 
-      void resetSignalSum( unsigned int index, double signal );
+      void resetSignalSum( unsigned int index, double signal = 0.0 );
       void addToSignalSum( unsigned int index, double signal );
       double getSignalSum( unsigned int index ) const;
 

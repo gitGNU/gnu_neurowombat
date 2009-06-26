@@ -36,7 +36,7 @@ build/main.o:	src/main.cpp src/kernel/Kernel.h
 # api
 
 
-build/api.o:	src/api/api.cpp src/api/api.h src/kernel/Kernel.h src/components/abstract/AbstractActivators.h src/components/abstract/AbstractAdders.h src/components/abstract/AbstractConnectors.h src/components/abstract/AbstractWeights.h src/neurons/abstract/AbstractNeuron.h src/components/analog/AnalogComparators.h src/components/analog/AnalogResistors.h src/components/analog/AnalogWires.h src/neurons/analog/AnalogNeuron.h src/engine/SimulationEngine.h src/math/Destribution.h
+build/api.o:	src/api/api.cpp src/api/api.h src/kernel/Kernel.h src/components/abstract/AbstractActivators.h src/components/abstract/AbstractAdders.h src/components/abstract/AbstractConnectors.h src/components/abstract/AbstractWeights.h src/neurons/abstract/AbstractNeuron.h src/components/analog/AnalogComparators.h src/components/analog/AnalogResistors.h src/components/analog/AnalogWires.h src/neurons/analog/AnalogNeuron.h src/engine/SimulationEngine.h src/math/Destribution.h src/math/TransferFunction.h
 		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/api/api.cpp
 
 
@@ -117,7 +117,7 @@ build/Destribution.o:	src/math/Destribution.cpp src/math/Destribution.h src/kern
 		${CC} -c -o $@ -Isrc src/math/Destribution.cpp
 
 
-build/TransferFunction.o:	src/math/TransferFunction.cpp src/math/TransferFunction.h
+build/TransferFunction.o:	src/math/TransferFunction.cpp src/math/TransferFunction.h src/kernel/KernelObject.h
 		${CC} -c -o $@ -Isrc src/math/TransferFunction.cpp
 
 

@@ -39,6 +39,8 @@ class AbstractWeights : public KernelObject
 
       unsigned int count() const;
 
+      void setupWeights( double * weights, unsigned int count );
+
       void setWeight( unsigned int index, double weight );
       double getWeight( unsigned int index ) const;
 

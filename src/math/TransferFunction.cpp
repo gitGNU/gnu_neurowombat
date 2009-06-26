@@ -30,6 +30,7 @@
 
 
 TransferFunction::TransferFunction()
+   : KernelObject()
    {
    // Do nothing;
    };

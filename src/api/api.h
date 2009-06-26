@@ -66,10 +66,25 @@ extern "C" int createAbstractAdders( lua_State * L );
 extern "C" int createAbstractConnectors( lua_State * L );
 
 
+extern "C" int getSignals( lua_State * L );
+
+
+extern "C" int setSignals( lua_State * L );
+
+
 extern "C" int createAbstractWeights( lua_State * L );
 
 
+extern "C" int getAbstractWeights( lua_State * L );
+
+
+extern "C" int setAbstractWeights( lua_State * L );
+
+
 extern "C" int createAbstractNeuron( lua_State * L );
+
+
+extern "C" int computeAbstractNeurons( lua_State * L );
 
 
 /***************************************************************************
@@ -99,6 +114,17 @@ extern "C" int createAnalogNeuron( lua_State * L );
 
 
 extern "C" int computeAnalogNeurons( lua_State * L );
+
+
+/***************************************************************************
+ *   Math API functions declaration                                        *
+ ***************************************************************************/
+
+
+extern "C" int createLinearActFunc( lua_State * L );
+
+
+extern "C" int createSigmoidActFunc( lua_State * L );
 
 
 /***************************************************************************

@@ -21,6 +21,9 @@
 #include "components/abstract/AbstractWeights.h"
 
 
+#include <string.h>
+
+
 AbstractWeights::AbstractWeights( unsigned int count )
    : KernelObject()
    {
@@ -46,6 +49,12 @@ AbstractWeights::~AbstractWeights()
 unsigned int AbstractWeights::count() const
    {
    return this->numWeights;
+   };
+
+
+void AbstractWeights::setupWeights( double * weights, unsigned int count )
+   {
+   memcpy( this->weights, weights, count * sizeof( double ) );
    };
 
 

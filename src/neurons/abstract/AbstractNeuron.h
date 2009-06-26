@@ -55,62 +55,39 @@ class AbstractNeuronExcp : public Exception < NS_ABSTRACTNEURON::EC >
  ***************************************************************************/
 
 
-class TestObject : public KernelObject
-   {
-   public:
-      TestObject(
-         AbstractActivators * activators = NULL,
-         AbstractAdders * adders = NULL,
-         AbstractConnectors * connectors = NULL,
-         AbstractWeights * weights = NULL
-         )
-         {
-         this->activators = activators;
-         this->adders = adders;
-         this->connectors = connectors;
-         this->weights = weights;
-         this->activators->capture();
-         this->adders->capture();
-         this->connectors->capture();
-         this->weights->capture();
-         };
-      virtual ~TestObject()
-         {
-         this->activators->release();
-         this->adders->release();
-         this->connectors->release();
-         this->weights->release();
-         };
-
-   private:
-      AbstractActivators * activators;
-      AbstractAdders * adders;
-      AbstractConnectors * connectors;
-      AbstractWeights * weights;
-   };
-
-
 class AbstractNeuron : public KernelObject
    {
    public:
       AbstractNeuron(
-         unsigned int numInputs = 0,
-         unsigned int * inputConnectors = NULL,
-         AbstractActivators * activators = NULL,
-         unsigned int activatorsBaseIndex = 0,
-         AbstractAdders * adders = NULL,
-         unsigned int addersBaseIndex = 0,
-         AbstractConnectors * connectors = NULL,
-         unsigned int connectorsBaseIndex = 0,
-         AbstractWeights * weights = NULL,
-         unsigned int weightsBaseIndex = 0
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         AbstractConnectors * connectors,
+         unsigned int connectorsBaseIndex,
+         AbstractWeights * weights,
+         unsigned int weightsBaseIndex,
+         AbstractAdders * adders,
+         unsigned int addersBaseIndex,
+         TransferFunction * activationFunction
          );
-      AbstractNeuron( const AbstractNeuron & other );
-      virtual ~AbstractNeuron();
-      virtual AbstractNeuron * clone();
 
-      unsigned int getNumInputs() const;
-      unsigned int getWeightsBaseIndex() const;
+      AbstractNeuron(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         AbstractConnectors * connectors,
+         unsigned int connectorsBaseIndex,
+         AbstractWeights * weights,
+         unsigned int weightsBaseIndex,
+         AbstractAdders * adders,
+         unsigned int addersBaseIndex,
+         AbstractActivators * activators,
+         unsigned int activatorsBaseIndex
+         );
+      virtual ~AbstractNeuron();
+
+      unsigned int getInputsCount() const;
+
+      void setupWeights( double * weights, unsigned int count );
+      double getWeight( unsigned int index );
 
       void compute();
       /*void trainOnce(
@@ -121,21 +98,39 @@ class AbstractNeuron : public KernelObject
          double speed
          );*/
 
+   protected:
+      AbstractNeuron();
+      AbstractNeuron( const AbstractNeuron & other );
+
+
    private:
-      unsigned int numInputs;
+      inline void sharedConstructor(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         AbstractConnectors * connectors,
+         unsigned int connectorsBaseIndex,
+         AbstractWeights * weights,
+         unsigned int weightsBaseIndex,
+         AbstractAdders * adders,
+         unsigned int addersBaseIndex
+         );
+
+      unsigned int inputsCount;
       unsigned int * inputConnectors;
 
+      AbstractConnectors * connectors;
+      unsigned int connectorsBaseIndex;
+
+      double * builtInWeights;
+      AbstractWeights * weights;
+      unsigned int weightsBaseIndex;
+
+      TransferFunction * activationFunction;
       AbstractActivators * activators;
       unsigned int activatorsBaseIndex;
 
       AbstractAdders * adders;
       unsigned int addersBaseIndex;
-
-      AbstractConnectors * connectors;
-      unsigned int connectorsBaseIndex;
-
-      AbstractWeights * weights;
-      unsigned int weightsBaseIndex;
    };
 
 

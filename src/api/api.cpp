@@ -38,6 +38,7 @@
 #include "neurons/analog/AnalogNeuron.h"
 #include "engine/SimulationEngine.h"
 #include "math/Destribution.h"
+#include "math/TransferFunction.h"
 
 
 
@@ -53,11 +54,16 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "closeId", closeId );
    lua_register( L, "readArray", readArray );
    // Register abstract neuron API functions;
-   /*lua_register( L, "createAbstractActivators", createAbstractActivators );
+   lua_register( L, "createAbstractActivators", createAbstractActivators );
    lua_register( L, "createAbstractAdders", createAbstractAdders );
    lua_register( L, "createAbstractConnectors", createAbstractConnectors );
+   lua_register( L, "getSignals", getSignals );
+   lua_register( L, "setSignals", setSignals );
    lua_register( L, "createAbstractWeights", createAbstractWeights );
-   lua_register( L, "createAbstractNeuron", createAbstractNeuron );*/
+   lua_register( L, "getAbstractWeights", getAbstractWeights );
+   lua_register( L, "setAbstractWeights", setAbstractWeights );
+   lua_register( L, "createAbstractNeuron", createAbstractNeuron );
+   lua_register( L, "computeAbstractNeurons", computeAbstractNeurons );
    // Register analog neuron API functions;
    lua_register( L, "createAnalogComparators", createAnalogComparators );
    lua_register( L, "createAnalogResistors", createAnalogResistors );
@@ -67,6 +73,9 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "setPotentials", setPotentials );
    lua_register( L, "createAnalogNeuron", createAnalogNeuron );
    lua_register( L, "computeAnalogNeurons", computeAnalogNeurons );
+   // Math API functions;
+   lua_register( L, "createLinearActFunc", createLinearActFunc );
+   lua_register( L, "createSigmoidActFunc", createSigmoidActFunc );
    // Simulation engine API functions;
    lua_register( L, "createExponentialDestribution", createExponentialDestribution );
    lua_register( L, "createWeibullDestribution", createWeibullDestribution );
@@ -225,6 +234,56 @@ int createAbstractConnectors( lua_State * L )
    };
 
 
+int getSignals( lua_State * L )
+   {
+   // Read connectors argument;
+   KernelObjectId connectorsId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( connectorsId );
+   AbstractConnectors * connectors = dynamic_cast < AbstractConnectors * >( object );
+
+   // Read baseIndex argument;
+   unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+   // Read count argument;
+   unsigned int count = luaL_checkinteger( L, 3 );
+
+   // Create table;
+   lua_newtable( L );
+   for ( unsigned int i = 0; i < count; i ++ )
+      {
+      lua_pushnumber( L, i );
+      lua_pushnumber( L, connectors->getSignal( baseIndex + i ) );
+      lua_rawset( L, -3 );
+      }
+
+   return 1;
+   };
+
+
+int setSignals( lua_State * L )
+   {
+   // Read connectors argument;
+   KernelObjectId connectorsId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( connectorsId );
+   AbstractConnectors * connectors = dynamic_cast < AbstractConnectors * >( object );
+
+   // Read baseIndex argument;
+   unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+   // Read potentials argument;
+   unsigned int limit = connectors->count();
+   lua_pushnil( L );
+   while ( lua_next( L, 3 ) != 0 )
+      {
+      unsigned int key = lua_tointeger( L, -2 ) - 1;
+      if ( key < limit ) connectors->setSignal( baseIndex + key, lua_tonumber( L, -1 ) );
+      lua_pop( L, 1 );
+      }
+
+   return 0;
+   };
+
+
 int createAbstractWeights( lua_State * L )
    {
    KernelObjectId id = 0;
@@ -241,38 +300,204 @@ int createAbstractWeights( lua_State * L )
    };
 
 
-      /*N,
-      inputConnectors,
-      activators, i,
-      adders, i,
-      connectors, i,
-      weights, ( N - 1 ) * i*/
+int getAbstractWeights( lua_State * L )
+   {
+   // Read neuron argument;
+   KernelObjectId neuronId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( neuronId );
+   AbstractNeuron * neuron = dynamic_cast < AbstractNeuron * >( object );
+
+   if ( neuron != NULL )
+      {
+      // Create table;
+      lua_newtable( L );
+      for ( unsigned int i = 0; i < neuron->getInputsCount(); i ++ )
+         {
+         lua_pushnumber( L, i );
+         lua_pushnumber( L, neuron->getWeight( i ) );
+         lua_rawset( L, -3 );
+         }
+      }
+   else
+      {
+      AbstractWeights * weights = dynamic_cast < AbstractWeights * >( object );
+
+      // Read baseIndex argument;
+      unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+      // Read count argument;
+      unsigned int count = luaL_checkinteger( L, 3 );
+
+      // Create table;
+      lua_newtable( L );
+      for ( unsigned int i = 0; i < count; i ++ )
+         {
+         lua_pushnumber( L, i );
+         lua_pushnumber( L, weights->getWeight( baseIndex + i ) );
+         lua_rawset( L, -3 );
+         }
+      }
+
+   return 1;
+   };
+
+
+int setAbstractWeights( lua_State * L )
+   {
+   // Read count argument;
+   unsigned int count = luaL_checkinteger( L, 3 );
+
+   // Read weights argument;
+   double * w = NULL;
+   if ( count > 0 )
+      {
+      w = new double[ count ];
+      readArray( L, 2, count, w );
+      }
+
+   // Read neuron argument;
+   KernelObjectId neuronId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( neuronId );
+   AbstractNeuron * neuron = dynamic_cast < AbstractNeuron * >( object );
+
+   if ( neuron != NULL )
+      {
+      neuron->setupWeights( w, count );
+      }
+   else
+      {
+      AbstractWeights * weights = dynamic_cast < AbstractWeights * >( object );
+      weights->setupWeights( w, count );
+      }
+
+   if ( w != NULL ) delete[] w;
+
+   return 0;
+   };
+
 
 int createAbstractNeuron( lua_State * L )
    {
-   KernelObjectId id = 0;
+   KernelObject * object = NULL;
 
-   KernelObjectId activatorsId = luaL_checkinteger( L, 1 );
-   KernelObjectId addersId = luaL_checkinteger( L, 2 );
+   // Read inputsCount argument;
+   unsigned int inputsCount = luaL_checkinteger( L, 1 );
+
+   // Read inputConnectors argument;
+   unsigned int * inputConnectors = NULL;
+   if ( inputsCount > 0 )
+      {
+      inputConnectors = new unsigned int[ inputsCount ];
+      readArray( L, 2, inputsCount, inputConnectors );
+      }
+
+   // Read connectors argument;
    KernelObjectId connectorsId = luaL_checkinteger( L, 3 );
-   KernelObjectId weightsId = luaL_checkinteger( L, 4 );
+   object = kernel->getObject( connectorsId );
+   AbstractConnectors * connectors = dynamic_cast < AbstractConnectors * >( object );
 
-   AbstractActivators * activators = ( AbstractActivators * ) kernel->getObject( activatorsId );
-   AbstractAdders * adders = ( AbstractAdders * ) kernel->getObject( addersId );
-   AbstractConnectors * connectors = ( AbstractConnectors * ) kernel->getObject( connectorsId );
-   AbstractWeights * weights = ( AbstractWeights * ) kernel->getObject( weightsId );
+   // Read connectorsBaseIndex argument;
+   unsigned int connectorsBaseIndex = luaL_checkinteger( L, 4 );
 
-   TestObject * testObject = new TestObject( activators, adders, connectors, weights );
-   id = kernel->insertObject( testObject );
+   // Read weights argument;
+   KernelObjectId weightsId = luaL_checkinteger( L, 5 );
+   object = kernel->getObject( weightsId );
+   AbstractWeights * weights = dynamic_cast < AbstractWeights * >( object );
+
+   // Read weightsBaseIndex argument;
+   unsigned int weightsBaseIndex = luaL_checkinteger( L, 6 );
+
+   // Read adders argument;
+   KernelObjectId addersId = luaL_checkinteger( L, 7 );
+   object = kernel->getObject( addersId );
+   AbstractAdders * adders = dynamic_cast < AbstractAdders * >( object );
+
+   // Read addersBaseIndex argument;
+   unsigned int addersBaseIndex = luaL_checkinteger( L, 8 );
+
+   // Read activationFunction argument;
+   KernelObjectId activationFunctionId = luaL_checkinteger( L, 9 );
+   object = kernel->getObject( activationFunctionId );
+   TransferFunction * activationFunction = dynamic_cast < TransferFunction * >( object );
+
+   // Create abstract neuron;
+   AbstractNeuron * neuron = NULL;
+   if ( activationFunction != NULL )
+      {
+      neuron = new AbstractNeuron(
+         inputsCount, inputConnectors,
+         connectors, connectorsBaseIndex,
+         weights, weightsBaseIndex,
+         adders, addersBaseIndex,
+         activationFunction
+         );
+      }
+   else
+      {
+      AbstractActivators * activators = dynamic_cast < AbstractActivators * >( object );
+
+      // Read activatorsBaseIndex argument;
+      unsigned int activatorsBaseIndex = luaL_checkinteger( L, 10 );
+
+      neuron = new AbstractNeuron(
+         inputsCount, inputConnectors,
+         connectors, connectorsBaseIndex,
+         weights, weightsBaseIndex,
+         adders, addersBaseIndex,
+         activators, activatorsBaseIndex
+         );
+      }
+
+   KernelObjectId id = kernel->insertObject( neuron );
+
+   // Free inputConnectors;
+   if ( inputConnectors != NULL ) delete[] inputConnectors;
 
    lua_pushnumber( L, id );
    return 1;
+   };
 
-   /*unsigned int activatorsHandle = 0;
-   KernelObject * object = kernel->getObject( activatorsHandle );
-   AbstractActivators * activators = dynamic_cast < AbstractActivators * >( object );
 
-   AbstractNeuron * neuron = new AbstractNeuron();*/
+int computeAbstractNeurons( lua_State * L )
+   {
+   // Read count argument;
+   unsigned int count = luaL_checkinteger( L, 2 );
+
+   // Read neurons argument;
+   AbstractNeuron ** neurons = NULL;
+   if ( count > 0 )
+      {
+      KernelObjectId neuronId = 0;
+      KernelObject * object = NULL;
+      neurons = new AbstractNeuron *[ count ];
+      lua_pushnil( L );
+      while ( lua_next( L, 1 ) != 0 )
+         {
+         unsigned int key = lua_tointeger( L, -2 );
+         if ( key < count )
+            {
+            neuronId = lua_tointeger( L, -1 );
+            object = kernel->getObject( neuronId );
+            neurons[ key ] = dynamic_cast < AbstractNeuron * >( object );
+            }
+
+         lua_pop( L, 1 );
+         }
+      }
+
+   // Read times argument;
+   unsigned int times = luaL_checkinteger( L, 3 );
+
+   // Calculate neurons;
+   for ( unsigned int i = 0; i < times; i ++ )
+      {
+      for ( unsigned int j = 0; j < count; j ++ )
+         {
+         if ( neurons[ j ] != NULL ) neurons[ j ]->compute();
+         }
+      }
+
+   return 0;
    };
 
 
@@ -554,6 +779,37 @@ int computeAnalogNeurons( lua_State * L )
       }
 
    return 0;
+   };
+
+
+/***************************************************************************
+ *   Math API functions implementation                                     *
+ ***************************************************************************/
+
+
+int createLinearActFunc( lua_State * L )
+   {
+   // Read a argument;
+   double a = luaL_checknumber( L, 1 );
+
+   // Read b argument;
+   double b = luaL_checknumber( L, 2 );
+
+   LinearTransferFunction * actFunc = new LinearTransferFunction( a, b );
+   KernelObjectId id = kernel->insertObject( actFunc );
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
+int createSigmoidActFunc( lua_State * L )
+   {
+   SigmoidTransferFunction * actFunc = new SigmoidTransferFunction();
+   KernelObjectId id = kernel->insertObject( actFunc );
+
+   lua_pushnumber( L, id );
+   return 1;
    };
 
 
