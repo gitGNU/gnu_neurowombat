@@ -128,7 +128,7 @@ void AbstractNeuron::setupWeights( double * weights, unsigned int count )
    else
       {
       // Setup external weights;
-      this->weights->setupWeights( weights, count );
+      this->weights->setupWeights( weightsBaseIndex, weights, count );
       }
    };
 
@@ -143,7 +143,7 @@ double AbstractNeuron::getWeight( unsigned int index )
    else
       {
       // Return external weights;
-      this->weights->getWeight( index );
+      return this->weights->getWeight( weightsBaseIndex + index );
       }
    };
 

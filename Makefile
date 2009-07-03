@@ -55,7 +55,7 @@ build/AbstractConnectors.o:	src/components/abstract/AbstractConnectors.cpp src/c
 		${CC} -c -o $@ -Isrc src/components/abstract/AbstractConnectors.cpp
 
 
-build/AbstractWeights.o:	src/components/abstract/AbstractWeights.cpp src/components/abstract/AbstractWeights.h src/kernel/KernelObject.h
+build/AbstractWeights.o:	src/components/abstract/AbstractWeights.cpp src/components/abstract/AbstractWeights.h src/kernel/KernelObject.h src/engine/InterruptManager.h
 		${CC} -c -o $@ -Isrc src/components/abstract/AbstractWeights.cpp
 
 

@@ -23,7 +23,7 @@
 
 
 #include "kernel/KernelObject.h"
-//#include "InterruptManager.h"
+#include "engine/InterruptManager.h"
 
 
 /***************************************************************************
@@ -39,7 +39,7 @@ class AbstractWeights : public KernelObject
 
       unsigned int count() const;
 
-      void setupWeights( double * weights, unsigned int count );
+      void setupWeights( unsigned int baseIndex, double * weights, unsigned int count );
 
       void setWeight( unsigned int index, double weight );
       double getWeight( unsigned int index ) const;
@@ -55,19 +55,22 @@ class AbstractWeights : public KernelObject
  ***************************************************************************/
 
 
-/*class AnalogResistorsManager : public InterruptManager
+class AbstractWeightsManager : public InterruptManager
    {
    public:
-      AnalogResistorsManager();
-      AnalogResistorsManager(
-         Destribution & destribution,
-         AnalogResistors * analogResistors
+      AbstractWeightsManager();
+      AbstractWeightsManager(
+         Destribution * destribution,
+         AbstractWeights * abstractWeights
          );
 
-      virtual ~AnalogResistorsManager();
+      virtual ~AbstractWeightsManager();
 
       virtual void handleInterrupt();
-   };*/
+
+   private:
+      AbstractWeights * abstractWeights;
+   };
 
 
 #endif

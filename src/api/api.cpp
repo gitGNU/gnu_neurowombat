@@ -79,6 +79,7 @@ void registerApiFunctions( lua_State * L )
    // Simulation engine API functions;
    lua_register( L, "createExponentialDestribution", createExponentialDestribution );
    lua_register( L, "createWeibullDestribution", createWeibullDestribution );
+   lua_register( L, "createAbstractWeightsManager", createAbstractWeightsManager );
    lua_register( L, "createAnalogResistorsManager", createAnalogResistorsManager );
    lua_register( L, "createSimulationEngine", createSimulationEngine );
    lua_register( L, "appendInterruptManager", appendInterruptManager );
@@ -367,7 +368,11 @@ int setAbstractWeights( lua_State * L )
    else
       {
       AbstractWeights * weights = dynamic_cast < AbstractWeights * >( object );
-      weights->setupWeights( w, count );
+
+      // Read baseIndex argument;
+      unsigned int baseIndex = luaL_checkinteger( L, 4 );
+
+      weights->setupWeights( baseIndex, w, count );
       }
 
    if ( w != NULL ) delete[] w;
@@ -845,6 +850,29 @@ int createWeibullDestribution( lua_State * L )
 
    WeibullDestribution * destribution = new WeibullDestribution( teta, beta );
    id = kernel->insertObject( destribution );
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
+int createAbstractWeightsManager( lua_State * L )
+   {
+   KernelObjectId id = 0;
+   KernelObject * object = NULL;
+
+   // Read destribution argument;
+   KernelObjectId destributionId = luaL_checkinteger( L, 1 );
+   object = kernel->getObject( destributionId );
+   Destribution * destribution = dynamic_cast < Destribution * >( object );
+
+   // Read weights argument;
+   KernelObjectId weightsId = luaL_checkinteger( L, 2 );
+   object = kernel->getObject( weightsId );
+   AbstractWeights * weights = dynamic_cast < AbstractWeights * >( object );
+
+   AbstractWeightsManager * manager = new AbstractWeightsManager( destribution, weights );
+   id = kernel->insertObject( manager );
 
    lua_pushnumber( L, id );
    return 1;

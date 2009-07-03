@@ -52,9 +52,9 @@ unsigned int AbstractWeights::count() const
    };
 
 
-void AbstractWeights::setupWeights( double * weights, unsigned int count )
+void AbstractWeights::setupWeights( unsigned int baseIndex, double * weights, unsigned int count )
    {
-   memcpy( this->weights, weights, count * sizeof( double ) );
+   memcpy( & this->weights[ baseIndex ], weights, count * sizeof( double ) );
    };
 
 
@@ -75,43 +75,46 @@ double AbstractWeights::getWeight( unsigned int index ) const
  ***************************************************************************/
 
 
-/*AnalogResistorsManager::AnalogResistorsManager()
+AbstractWeightsManager::AbstractWeightsManager()
    : InterruptManager()
    {
    // Do nothing;
    };
 
 
-AnalogResistorsManager::AnalogResistorsManager(
-   Destribution & destribution,
-   AnalogResistors * analogResistors
+AbstractWeightsManager::AbstractWeightsManager(
+   Destribution * destribution,
+   AbstractWeights * abstractWeights
    )
    : InterruptManager(
-      ( analogResistors != NULL ) ? analogResistors->count() : 0,
+      ( abstractWeights != NULL ) ? abstractWeights->count() : 0,
       false,
-      destribution,
-      analogResistors
+      destribution
       )
    {
-   // Do nothing;
+   this->abstractWeights = abstractWeights;
+
+   // Capture object;
+   if ( abstractWeights != NULL ) abstractWeights->capture();
    };
 
 
-AnalogResistorsManager::~AnalogResistorsManager()
+AbstractWeightsManager::~AbstractWeightsManager()
    {
-   // Do nothing;
+   // Release captured object;
+   if ( abstractWeights != NULL ) abstractWeights->release();
    };
 
 
-void AnalogResistorsManager::handleInterrupt()
+void AbstractWeightsManager::handleInterrupt()
    {
    // Break up wire;
    int resistorIndex = this->getIntSource();
-   if ( resistorIndex >= 0 && this->entity != NULL )
+   if ( resistorIndex >= 0 && this->abstractWeights != NULL )
       {
-      ( ( AnalogResistors * ) this->entity )->setResistance( resistorIndex, 0.0 );
+      this->abstractWeights->setWeight( resistorIndex, 0.0 );
       }
 
    // Pass control to base implementation;
    InterruptManager::handleInterrupt();
-   };*/
+   };

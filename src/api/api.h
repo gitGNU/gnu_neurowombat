@@ -138,6 +138,9 @@ extern "C" int createExponentialDestribution( lua_State * L );
 extern "C" int createWeibullDestribution( lua_State * L );
 
 
+extern "C" int createAbstractWeightsManager( lua_State * L );
+
+
 extern "C" int createAnalogResistorsManager( lua_State * L );
 
 

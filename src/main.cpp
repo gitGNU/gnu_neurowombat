@@ -35,6 +35,8 @@ There is NO WARRANTY, to the extent permitted by law."
 
 
 #include <stdio.h>
+#include <cstdlib>
+#include <string.h>
 //#include <time.h>
 
 
