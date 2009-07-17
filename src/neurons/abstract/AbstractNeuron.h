@@ -26,6 +26,7 @@
 #include "kernel/KernelObject.h"
 #include "components/abstract/AbstractActivators.h"
 #include "components/abstract/AbstractAdders.h"
+#include "components/abstract/AbstractBuffers.h"
 #include "components/abstract/AbstractConnectors.h"
 #include "components/abstract/AbstractWeights.h"
 
@@ -65,6 +66,8 @@ class AbstractNeuron : public KernelObject
          unsigned int connectorsBaseIndex,
          AbstractWeights * weights,
          unsigned int weightsBaseIndex,
+         AbstractBuffers * buffers,
+         unsigned int buffersBaseIndex,
          AbstractAdders * adders,
          unsigned int addersBaseIndex,
          TransferFunction * activationFunction
@@ -77,6 +80,8 @@ class AbstractNeuron : public KernelObject
          unsigned int connectorsBaseIndex,
          AbstractWeights * weights,
          unsigned int weightsBaseIndex,
+         AbstractBuffers * buffers,
+         unsigned int buffersBaseIndex,
          AbstractAdders * adders,
          unsigned int addersBaseIndex,
          AbstractActivators * activators,
@@ -89,14 +94,16 @@ class AbstractNeuron : public KernelObject
       void setupWeights( double * weights, unsigned int count );
       double getWeight( unsigned int index );
 
+      double getOutput();
+
       void compute();
-      /*void trainOnce(
-         double * x,
-         unsigned int length,
-         double y,
-         double * e,
-         double speed
-         );*/
+
+      void createDampingBuffers();
+
+      void snapDelta( double err );
+      double getDelta();
+      double getWeightedDelta( unsigned int index );
+      void modifyWeights( double damping, double speed );
 
    protected:
       AbstractNeuron();
@@ -111,6 +118,8 @@ class AbstractNeuron : public KernelObject
          unsigned int connectorsBaseIndex,
          AbstractWeights * weights,
          unsigned int weightsBaseIndex,
+         AbstractBuffers * buffers,
+         unsigned int buffersBaseIndex,
          AbstractAdders * adders,
          unsigned int addersBaseIndex
          );
@@ -125,12 +134,20 @@ class AbstractNeuron : public KernelObject
       AbstractWeights * weights;
       unsigned int weightsBaseIndex;
 
+      unsigned int builtInBuffersCount;
+      double * builtInBuffers;
+      AbstractBuffers * buffers;
+      unsigned int buffersBaseIndex;
+
       TransferFunction * activationFunction;
       AbstractActivators * activators;
       unsigned int activatorsBaseIndex;
 
       AbstractAdders * adders;
       unsigned int addersBaseIndex;
+
+      double net;
+      double delta;
    };
 
 

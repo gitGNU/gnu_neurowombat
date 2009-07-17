@@ -18,107 +18,95 @@
  ***************************************************************************/
 
 
-#include "components/abstract/AbstractWeights.h"
+#include "components/abstract/AbstractBuffers.h"
 
 
 #include <string.h>
 
 
-AbstractWeights::AbstractWeights( unsigned int count )
+AbstractBuffers::AbstractBuffers( unsigned int count )
    : KernelObject()
    {
-   this->numWeights = count;
+   this->numBuffers = count;
 
    if ( count > 0 )
       {
-      this->weights = new double[ count ];
+      this->buffers = new double[ count ];
       }
    else
       {
-      this->weights = NULL;
+      this->buffers = NULL;
       }
    };
 
 
-AbstractWeights::~AbstractWeights()
+AbstractBuffers::~AbstractBuffers()
    {
-   if ( this->weights != NULL ) delete[] this->weights;
+   if ( this->buffers != NULL ) delete[] this->buffers;
    };
 
 
-unsigned int AbstractWeights::count() const
+unsigned int AbstractBuffers::count() const
    {
-   return this->numWeights;
+   return this->numBuffers;
    };
 
 
-void AbstractWeights::setupWeights( unsigned int baseIndex, double * weights, unsigned int count )
+void AbstractBuffers::setBuffer( unsigned int index, double buffer )
    {
-   memcpy( & this->weights[ baseIndex ], weights, count * sizeof( double ) );
+   this->buffers[ index ] = buffer;
    };
 
 
-void AbstractWeights::setWeight( unsigned int index, double weight )
+double AbstractBuffers::getBuffer( unsigned int index ) const
    {
-   this->weights[ index ] = weight;
-   };
-
-
-void AbstractWeights::incWeight( unsigned int index, double weight )
-   {
-   this->weights[ index ] += weight;
-   };
-
-
-double AbstractWeights::getWeight( unsigned int index ) const
-   {
-   return this->weights[ index ];
+   return this->buffers[ index ];
    };
 
 
 /***************************************************************************
- *   AbstractWeightsManager class implementation                           *
+ *   AbstractBuffersManager class implementation                           *
  ***************************************************************************/
 
 
-AbstractWeightsManager::AbstractWeightsManager()
+AbstractBuffersManager::AbstractBuffersManager()
    : InterruptManager()
    {
    // Do nothing;
    };
 
 
-AbstractWeightsManager::AbstractWeightsManager(
+AbstractBuffersManager::AbstractBuffersManager(
    Destribution * destribution,
-   AbstractWeights * abstractWeights
+   AbstractBuffers * abstractBuffers
    )
    : InterruptManager(
-      ( abstractWeights != NULL ) ? abstractWeights->count() : 0,
+      ( abstractBuffers != NULL ) ? abstractBuffers->count() : 0,
       false,
       destribution
       )
    {
-   this->abstractWeights = abstractWeights;
+   this->abstractBuffers = abstractBuffers;
 
    // Capture object;
-   if ( abstractWeights != NULL ) abstractWeights->capture();
+   if ( abstractBuffers != NULL ) abstractBuffers->capture();
    };
 
 
-AbstractWeightsManager::~AbstractWeightsManager()
+AbstractBuffersManager::~AbstractBuffersManager()
    {
    // Release captured object;
-   if ( abstractWeights != NULL ) abstractWeights->release();
+   if ( abstractBuffers != NULL ) abstractBuffers->release();
    };
 
 
-void AbstractWeightsManager::handleInterrupt()
+void AbstractBuffersManager::handleInterrupt()
    {
-   // Break up weight;
+   // Break up buffer;
    int resistorIndex = this->getIntSource();
-   if ( resistorIndex >= 0 && this->abstractWeights != NULL )
+   if ( resistorIndex >= 0 && this->abstractBuffers != NULL )
       {
-      this->abstractWeights->setWeight( resistorIndex, 0.0 );
+      this->abstractBuffers->setBuffer( resistorIndex, 0.0 );
       }
 
    // Pass control to base implementation;

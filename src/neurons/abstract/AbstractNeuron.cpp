@@ -48,6 +48,8 @@ AbstractNeuron::AbstractNeuron(
    unsigned int connectorsBaseIndex,
    AbstractWeights * weights,
    unsigned int weightsBaseIndex,
+   AbstractBuffers * buffers,
+   unsigned int buffersBaseIndex,
    AbstractAdders * adders,
    unsigned int addersBaseIndex,
    TransferFunction * activationFunction
@@ -58,6 +60,7 @@ AbstractNeuron::AbstractNeuron(
       inputsCount, inputConnectors,
       connectors, connectorsBaseIndex,
       weights, weightsBaseIndex,
+      buffers, buffersBaseIndex,
       adders, addersBaseIndex
       );
 
@@ -76,6 +79,8 @@ AbstractNeuron::AbstractNeuron(
    unsigned int connectorsBaseIndex,
    AbstractWeights * weights,
    unsigned int weightsBaseIndex,
+   AbstractBuffers * buffers,
+   unsigned int buffersBaseIndex,
    AbstractAdders * adders,
    unsigned int addersBaseIndex,
    AbstractActivators * activators,
@@ -87,6 +92,7 @@ AbstractNeuron::AbstractNeuron(
       inputsCount, inputConnectors,
       connectors, connectorsBaseIndex,
       weights, weightsBaseIndex,
+      buffers, buffersBaseIndex,
       adders, addersBaseIndex
       );
 
@@ -102,10 +108,12 @@ AbstractNeuron::~AbstractNeuron()
    {
    if ( this->inputConnectors != NULL ) delete[] this->inputConnectors;
    if ( this->builtInWeights != NULL ) delete[] this->builtInWeights;
+   if ( this->builtInBuffers != NULL ) delete[] this->builtInBuffers;
 
    // Release captured objects;
    if ( connectors != NULL ) connectors->release();
    if ( weights != NULL ) weights->release();
+   if ( buffers != NULL ) buffers->release();
    if ( activationFunction != NULL ) activationFunction->release();
    if ( activators != NULL ) activators->release();
    if ( adders != NULL ) adders->release();
@@ -148,10 +156,16 @@ double AbstractNeuron::getWeight( unsigned int index )
    };
 
 
+double AbstractNeuron::getOutput()
+   {
+   return connectors->getSignal( connectorsBaseIndex );
+   };
+
+
 void AbstractNeuron::compute()
    {
    // Calculate weighted sum of input signals;
-   double net = 0.0;
+   net = 0.0;
    if ( adders == NULL )
       {
       // Use built-in adder;
@@ -228,30 +242,118 @@ void AbstractNeuron::compute()
    };
 
 
-/*void PseudoAnalogNeuron::trainOnce(
-   double * x,
-   unsigned int length,
-   double y,
-   double * e,
-   double speed
-   )
+void AbstractNeuron::createDampingBuffers()
    {
-   * e = y - this->compute( x, length );
-
-   // Net value will be loaded from buffer which stores it till the last forvard propagation;
-   this->delta = ( * e );
-   double d = speed * this->delta;
-   if ( ! this->damping )
+   if ( buffers == NULL && builtInBuffersCount != inputsCount )
       {
-      for ( unsigned int i = 0; i < this->numInputs; i ++ )
-         {
-         this->wbuffer[ i ] = this->w[ i ];
-         this->w[ i ] += x[ i ] * d;
-         }
+      if ( builtInBuffers != NULL ) delete[] builtInBuffers;
 
-      this->t += d;
+      builtInBuffers = new double[ inputsCount ];
+      builtInBuffersCount = inputsCount;
+      for ( unsigned int i = 0; i < inputsCount; i ++ )
+         {
+         builtInBuffers[ i ] = 0.0;
+         };
+      };
+   };
+
+
+void AbstractNeuron::snapDelta( double err )
+   {
+   delta = err;
+
+   if ( activators == NULL )
+      {
+      // Use built-in activation function;
+      delta *= activationFunction->evaluateDerivative( net );
       }
-   };*/
+   else
+      {
+      // Use external activator;
+      delta *= activators->evaluateDerivative( net );
+      }
+   };
+
+
+double AbstractNeuron::getDelta()
+   {
+   return delta;
+   };
+
+
+double AbstractNeuron::getWeightedDelta( unsigned int index )
+   {
+   if ( weights == NULL )
+      {
+      // Use build-in weights;
+      return delta * builtInWeights[ index ];
+      }
+   else
+      {
+      // Use external weights;
+      return delta * weights->getWeight( weightsBaseIndex + index );
+      }
+   };
+
+
+void AbstractNeuron::modifyWeights( double damping, double speed )
+   {
+   double d = delta * speed;
+   double dw = 0;
+
+   if ( weights == NULL )
+      {
+      // Use build-in weights;
+      if ( buffers == NULL )
+         {
+         // Use built-in buffers;
+         for ( unsigned int i = 0; i < inputsCount; i ++ )
+            {
+            dw = damping * builtInBuffers[ i ] +
+               d * connectors->getSignal( inputConnectors[ i ] );
+            builtInBuffers[ i ] = dw;
+            builtInWeights[ i ] += dw;
+            }
+         }
+      else
+         {
+         // Use external buffers;
+         for ( unsigned int i = 0; i < inputsCount; i ++ )
+            {
+            dw = damping * buffers->getBuffer( i ) +
+               d * connectors->getSignal( inputConnectors[ i ] );
+            buffers->setBuffer( i, dw );
+            builtInWeights[ i ] += dw;
+            }
+         }
+      }
+   else
+      {
+      // Use external weights;
+      if ( buffers == NULL )
+         {
+         // Use built-in buffers;
+         for ( unsigned int i = 0; i < inputsCount; i ++ )
+            {
+            dw = damping * builtInBuffers[ i ] +
+               d * connectors->getSignal( inputConnectors[ i ] );
+            builtInBuffers[ i ] = dw;
+            weights->incWeight( weightsBaseIndex + i, dw );
+            }
+         }
+      else
+         {
+         // Use external buffers;
+         for ( unsigned int i = 0; i < inputsCount; i ++ )
+            {
+            dw = damping * buffers->getBuffer( i ) +
+               d * connectors->getSignal( inputConnectors[ i ] );
+            buffers->setBuffer( i, dw );
+            weights->incWeight( weightsBaseIndex + i, dw );
+            }
+         }
+      }
+   };
 
 
 AbstractNeuron::AbstractNeuron()
@@ -274,6 +376,8 @@ inline void AbstractNeuron::sharedConstructor(
    unsigned int connectorsBaseIndex,
    AbstractWeights * weights,
    unsigned int weightsBaseIndex,
+   AbstractBuffers * buffers,
+   unsigned int buffersBaseIndex,
    AbstractAdders * adders,
    unsigned int addersBaseIndex
    )
@@ -316,8 +420,23 @@ inline void AbstractNeuron::sharedConstructor(
    this->weightsBaseIndex = weightsBaseIndex;
    if ( weights != NULL ) weights->capture();
 
+   // Setup built-in buffers;
+   this->builtInBuffersCount = 0;
+   this->builtInBuffers = NULL;
+
+   // Setup buffers;
+   this->buffers = buffers;
+   this->buffersBaseIndex = buffersBaseIndex;
+   if ( buffers != NULL ) buffers->capture();
+
    // Setup adders;
    this->adders = adders;
    this->addersBaseIndex = addersBaseIndex;
    if ( adders != NULL ) adders->capture();
+
+   // Setup net;
+   this->net = 0.0;
+
+   // Setup delta;
+   this->delta = 0.0;
    };

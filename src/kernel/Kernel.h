@@ -23,7 +23,7 @@
 
 
 #include <map>
-#include "lua.hpp"
+#include <lua.hpp>
 
 
 #include "kernel/KernelObject.h"

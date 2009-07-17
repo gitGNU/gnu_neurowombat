@@ -41,7 +41,7 @@ class AbstractConnectors : public KernelObject
 
       void copySignal( unsigned int destIndex, unsigned int srcIndex );
       void setSignal( unsigned int index, double signal );
-      virtual double getSignal( unsigned int index ) const;
+      double getSignal( unsigned int index ) const;
 
       void repareAll();
       void breakWire( unsigned int index );

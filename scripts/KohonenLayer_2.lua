@@ -22,9 +22,9 @@
 
 -- Function for neurons competition;
 function getWinner( x )
-   local index = 0;
-   local max = x[ 0 ];
-   for i = 1, N - 1 do
+   local index = 1;
+   local max = x[ 1 ];
+   for i = 2, N do
       if x[ i ] > max then
          max = x[ i ];
          index = i;
@@ -50,18 +50,18 @@ end
 function trainNetwork( vectors, epochs, speed )
    -- Initial setup;
    local w = {};
-   w[ 0 ] = N * math.exp( 1.0 );
-   for i = 1, K do
-      w[ i ] = getInitWeight( vectors, i );
+   w[ 1 ] = N * math.exp( 1.0 );
+   for i = 2, K + 1 do
+      w[ i ] = getInitWeight( vectors, i - 1 );
       end
 
-   for i = 0, N - 1 do
+   for i = 1, N do
       setAbstractWeights( neurons[ i ], w, K + 1 );
       end
 
    -- Setup activity parameters;
    local c = {};
-   for i = 0, N - 1 do c[ i ] = 1.0 / N; end
+   for i = 1, N do c[ i ] = 1.0 / N; end
 
    local L = 0.001;
    local x = {};
@@ -72,13 +72,13 @@ function trainNetwork( vectors, epochs, speed )
       x = getSignals( connectors, 1 + K, N );
       winner = getWinner( x );
 
-      for j = 0, N - 1 do
-         w = getAbstractWeights( weights, ( K + 1 ) * j, K + 1 );
+      for j = 1, N do
+         w = getAbstractWeights( weights, ( K + 1 ) * ( j - 1 ), K + 1 );
 
          if j == winner then
             -- Modify weights;
-            for k = 1, K do
-               w[ k ] = w[ k ] + speed * ( vectors[ i % #vectors + 1 ][ k ] - w[ k ] );
+            for k = 2, K + 1 do
+               w[ k ] = w[ k ] + speed * ( vectors[ i % #vectors + 1 ][ k - 1 ] - w[ k ] );
                end
 
             c[ j ] = c[ j ] + L * ( 1.0 - c[ j ] );
@@ -86,7 +86,7 @@ function trainNetwork( vectors, epochs, speed )
             c[ j ] = c[ j ] * ( 1.0 - L );
          end
 
-         w[ 0 ] = math.exp( 1.0 - math.log( c[ j ] ) );
+         w[ 1 ] = math.exp( 1.0 - math.log( c[ j ] ) );
          setAbstractWeights( neurons[ j ], w, K + 1 );
          end
       end
@@ -101,6 +101,7 @@ function testNetwork()
    setSignals( connectors, 1, clusters[ 1 ] );
    computeAbstractNeurons( neurons, N, 1 );
    local x1 = getWinner( getSignals( connectors, 1 + K, N ) );
+   local x2 = 3 - x1;
 
    local hitsCount = 0;
    for i = 1, 100 do
@@ -112,7 +113,7 @@ function testNetwork()
       setSignals( connectors, 1, v );
       computeAbstractNeurons( neurons, N, 1 );
       local winner = getWinner( getSignals( connectors, 1 + K, N ) );
-      if ( winner == x1 ) and ( realClass == 1 ) or ( winner == 1 - x1 ) and ( realClass == 2 ) then
+      if ( winner == x1 ) and ( realClass == 1 ) or ( winner == x2 ) and ( realClass == 2 ) then
          hitsCount = hitsCount + 1;
          end
       end
@@ -140,16 +141,17 @@ io.write( "Assembling Kohonen layer ( 2 neurons ) ... " ); io.flush();
 neurons = {};
 for i = 0, N - 1 do
    inputConnectors = {};
-   inputConnectors[ 0 ] = 0;
+   inputConnectors[ 1 ] = 0;
    for j = 1, K do
-      inputConnectors[ j ] = j;
+      inputConnectors[ j + 1 ] = j;
       end
 
-   neurons[ i ] = createAbstractNeuron(
+   neurons[ i + 1 ] = createAbstractNeuron(
       K + 1,
       inputConnectors,
       connectors, 1 + K + i,
       weights, ( K + 1 ) * i,
+      0, 0,
       0, 0,
       actFunc
       );
@@ -169,10 +171,10 @@ trainNetwork( trainVectors, 100, 0.5 );
 print( "[OK]" );
 
 -- Print weights;
-for i = 0, N - 1 do
-   --w = getAbstractWeights( weights, ( K + 1 ) * i, K + 1 );
+for i = 1, N do
+   --w = getAbstractWeights( weights, ( K + 1 ) * ( i - 1 ), K + 1 );
    w = getAbstractWeights( neurons[ i ] );
-   for j = 0, K do
+   for j = 1, K + 1 do
       print( "w[ " .. i .. " ][ " .. j .. " ] = " .. w[ j ] );
       end
    end
@@ -221,7 +223,7 @@ print( "[OK]" );
 print( "weightsFaults = " .. weightsFaults .. "; timeToFail = " .. timeToFail );
 
 -- Close objects;
-for i = 0, N - 1 do
+for i = 1, N do
    closeId( neurons[ i ] );
    end
 

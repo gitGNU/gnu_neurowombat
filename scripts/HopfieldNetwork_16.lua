@@ -61,8 +61,8 @@ function testNetwork()
       -- Analize result;
       local isTopPatern = true;
       local isBottomPatern = true;
-      for j = 0, N - 1 do
-         if j < 8 then
+      for j = 1, N do
+         if j <= 8 then
             if y[ j ] ~= 1.0 then isTopPatern = false; end
             if y[ j ] ~= -1.0 then isBottomPatern = false; end
          else
@@ -85,23 +85,23 @@ print( "API version: " .. apiVersion() );
 
 -- Create analog components for Hopfield network;
 N = 16;
-io.write( "Creating analog components ... " );
+io.write( "Creating analog components ... " ); io.flush();
 comparators = createAnalogComparators( N );
 resistors = createAnalogResistors( N * ( N - 1 ) * 2 );
 wires = createAnalogWires( 2 + N );
 print( "[OK]" );
 
 -- Create neurons layer;
-io.write( "Assembling Hopfield network ( 16 neurons ) ... " );
+io.write( "Assembling Hopfield network ( 16 neurons ) ... " ); io.flush();
 neurons = {};
 for i = 0, N - 1 do
    inputWires = {};
    for j = 0, N - 2 do
-      if j >= i then inputWires[ j ] = j + 3;
-      else inputWires[ j ] = j + 2; end
+      if j >= i then inputWires[ j + 1 ] = j + 3;
+      else inputWires[ j + 1 ] = j + 2; end
       end
 
-   neurons[ i ] = createAnalogNeuron(
+   neurons[ i + 1 ] = createAnalogNeuron(
       N - 1,
       inputWires,
       0, 1,
@@ -114,27 +114,28 @@ for i = 0, N - 1 do
 print( "[OK]" );
 
 -- Train Hopfield network;
-io.write( "Training ... " );
+io.write( "Training ... " ); io.flush();
 M = 2;
-images = {};
-images[ 0 ] = { 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1 };
-images[ 1 ] = { -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1 };
+images = {
+   { 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1 },
+   { -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1 }
+   };
 
 for i = 0, N - 1 do
    w = {};
    for j = 0, N - 2 do
-      w[ j ] = 0.0;
+      w[ j + 1 ] = 0.0;
       if j >= i then
-         for k = 0, M - 1 do
-            w[ j ] = w[ j ] + images[ k ][ i + 1 ] * images[ k ][ j + 2 ];
+         for k = 1, M do
+            w[ j + 1 ] = w[ j + 1 ] + images[ k ][ i + 1 ] * images[ k ][ j + 2 ];
             end
       else
-         for k = 0, M - 1 do
-            w[ j ] = w[ j ] + images[ k ][ i + 1 ] * images[ k ][ j + 1 ];
+         for k = 1, M do
+            w[ j + 1 ] = w[ j + 1 ] + images[ k ][ i + 1 ] * images[ k ][ j + 1 ];
             end
          end
 
-      w[ j ] = w[ j ] / N;
+      w[ j + 1 ] = w[ j + 1 ] / N;
       end
 
       setupAnalogResistors( resistors, 2 * ( N - 1 ) * i, N - 1, w, 2 );
@@ -148,7 +149,7 @@ manager = createAnalogResistorsManager( destr, resistors );
 engine = createSimulationEngine();
 appendInterruptManager( engine, manager );
 
-io.write( "Simulating ... " );
+io.write( "Simulating ... " ); io.flush();
 resistorFaults = 0;
 timeToFail = 0.0;
 while stepOverEngine( engine ) do
@@ -167,7 +168,7 @@ print( "resistorFaults = " .. resistorFaults .. "; timeToFail = " .. timeToFail 
 closeId( engine );
 closeId( manager );
 closeId( destr );
-for i = 0, N - 1 do
+for i = 1, N do
    closeId( neurons[ i ] );
    end
 

@@ -43,6 +43,8 @@ class AbstractActivators : public KernelObject
       void setSignal( unsigned int index, double signal );
       double getSignal( unsigned int index ) const;
 
+      double evaluateDerivative( double x );
+
    private:
       unsigned int numNonLinearElements;
       double * analogSignals;

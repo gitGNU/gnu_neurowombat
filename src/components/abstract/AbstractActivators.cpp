@@ -71,3 +71,9 @@ double AbstractActivators::getSignal( unsigned int index ) const
    {
    return this->transferFunction->evaluateFunction( this->analogSignals[ index ] );
    };
+
+
+double AbstractActivators::evaluateDerivative( double x )
+   {
+   return this->transferFunction->evaluateDerivative( x );
+   };

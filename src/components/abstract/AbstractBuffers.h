@@ -18,8 +18,8 @@
  ***************************************************************************/
 
 
-#ifndef ABSTRACTWEIGHTS_H
-#define ABSTRACTWEIGHTS_H
+#ifndef ABSTRACTBUFFERS_H
+#define ABSTRACTBUFFERS_H
 
 
 #include "kernel/KernelObject.h"
@@ -27,50 +27,47 @@
 
 
 /***************************************************************************
- *   AbstractWeights class declaration                                     *
+ *   AbstractBuffers class declaration                                     *
  ***************************************************************************/
 
 
-class AbstractWeights : public KernelObject
+class AbstractBuffers : public KernelObject
    {
    public:
-      AbstractWeights( unsigned int count = 0 );
-      virtual ~AbstractWeights();
+      AbstractBuffers( unsigned int count = 0 );
+      virtual ~AbstractBuffers();
 
       unsigned int count() const;
 
-      void setupWeights( unsigned int baseIndex, double * weights, unsigned int count );
-
-      void setWeight( unsigned int index, double weight );
-      void incWeight( unsigned int index, double weight );
-      double getWeight( unsigned int index ) const;
+      void setBuffer( unsigned int index, double buffer );
+      double getBuffer( unsigned int index ) const;
 
    private:
-      unsigned int numWeights;
-      double * weights;
+      unsigned int numBuffers;
+      double * buffers;
    };
 
 
 /***************************************************************************
- *   AbstractWeightsManager class declaration                              *
+ *   AbstractBuffersManager class declaration                              *
  ***************************************************************************/
 
 
-class AbstractWeightsManager : public InterruptManager
+class AbstractBuffersManager : public InterruptManager
    {
    public:
-      AbstractWeightsManager();
-      AbstractWeightsManager(
+      AbstractBuffersManager();
+      AbstractBuffersManager(
          Destribution * destribution,
-         AbstractWeights * abstractWeights
+         AbstractBuffers * abstractBuffers
          );
 
-      virtual ~AbstractWeightsManager();
+      virtual ~AbstractBuffersManager();
 
       virtual void handleInterrupt();
 
    private:
-      AbstractWeights * abstractWeights;
+      AbstractBuffers * abstractBuffers;
    };
 
 

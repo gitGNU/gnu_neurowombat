@@ -22,7 +22,7 @@
 #define API_H
 
 
-#include "lua.hpp"
+#include <lua.hpp>
 
 
 #define API_VERSION "0.1"
@@ -63,6 +63,9 @@ extern "C" int createAbstractActivators( lua_State * L );
 extern "C" int createAbstractAdders( lua_State * L );
 
 
+extern "C" int createAbstractBuffers( lua_State * L );
+
+
 extern "C" int createAbstractConnectors( lua_State * L );
 
 
@@ -85,6 +88,9 @@ extern "C" int createAbstractNeuron( lua_State * L );
 
 
 extern "C" int computeAbstractNeurons( lua_State * L );
+
+
+extern "C" int trainBPAbstractNeurons( lua_State * L );
 
 
 /***************************************************************************

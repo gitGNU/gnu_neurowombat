@@ -24,11 +24,13 @@
 #include <math.h>
 #include <stdio.h>
 #include <typeinfo>
+#include <vector>
 
 
 #include "kernel/Kernel.h"
 #include "components/abstract/AbstractActivators.h"
 #include "components/abstract/AbstractAdders.h"
+#include "components/abstract/AbstractBuffers.h"
 #include "components/abstract/AbstractConnectors.h"
 #include "components/abstract/AbstractWeights.h"
 #include "neurons/abstract/AbstractNeuron.h"
@@ -47,6 +49,25 @@
 extern Kernel * kernel;
 
 
+#define _readIntegersVector( L, index, integers )\
+   lua_pushnil( L );\
+   while ( lua_next( L, index ) != 0 )\
+      {\
+      integers.push_back( lua_tointeger( L, -1 ) );\
+      lua_pop( L, 1 );\
+      }\
+
+
+#define _readKernelObjectsVector( L, index, T, objects )\
+   lua_pushnil( L );\
+   while ( lua_next( L, index ) != 0 )\
+      {\
+      T object = dynamic_cast < T >( kernel->getObject( lua_tointeger( L, -1 ) ) );\
+      if ( object != NULL ) objects.push_back( object );\
+      lua_pop( L, 1 );\
+      }\
+
+
 void registerApiFunctions( lua_State * L )
    {
    // Register common API functions;
@@ -56,6 +77,7 @@ void registerApiFunctions( lua_State * L )
    // Register abstract neuron API functions;
    lua_register( L, "createAbstractActivators", createAbstractActivators );
    lua_register( L, "createAbstractAdders", createAbstractAdders );
+   lua_register( L, "createAbstractBuffers", createAbstractBuffers );
    lua_register( L, "createAbstractConnectors", createAbstractConnectors );
    lua_register( L, "getSignals", getSignals );
    lua_register( L, "setSignals", setSignals );
@@ -64,6 +86,7 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "setAbstractWeights", setAbstractWeights );
    lua_register( L, "createAbstractNeuron", createAbstractNeuron );
    lua_register( L, "computeAbstractNeurons", computeAbstractNeurons );
+   lua_register( L, "trainBPAbstractNeurons", trainBPAbstractNeurons );
    // Register analog neuron API functions;
    lua_register( L, "createAnalogComparators", createAnalogComparators );
    lua_register( L, "createAnalogResistors", createAnalogResistors );
@@ -96,8 +119,9 @@ unsigned int readArray( lua_State * L, int index, unsigned int length, unsigned 
    lua_pushnil( L );
    while ( lua_next( L, index ) != 0 && i < length )
       {
-      // Use 'key' ( at index -2 ) and 'value' ( at index -1 );
-      unsigned int key = lua_tointeger( L, -2 );
+      // Read key and decrease it by 1 to provide compatibility
+      // between C and Lua-style arrays;
+      unsigned int key = lua_tointeger( L, -2 ) - 1;
       if ( key < length ) array[ key ] = lua_tointeger( L, -1 );
 
       // Remove 'value' but keep 'key' for next iteration;
@@ -118,8 +142,9 @@ unsigned int readArray( lua_State * L, int index, unsigned int length, double * 
    lua_pushnil( L );
    while ( lua_next( L, index ) != 0 && i < length )
       {
-      // Use 'key' ( at index -2 ) and 'value' ( at index -1 );
-      unsigned int key = lua_tointeger( L, -2 );
+      // Read key and decrease it by 1 to provide compatibility
+      // between C and Lua-style arrays;
+      unsigned int key = lua_tointeger( L, -2 ) - 1;
       if ( key < length ) array[ key ] = lua_tonumber( L, -1 );
 
       // Remove 'value' but keep 'key' for next iteration;
@@ -219,6 +244,22 @@ int createAbstractAdders( lua_State * L )
    };
 
 
+int createAbstractBuffers( lua_State * L )
+   {
+   KernelObjectId id = 0;
+
+   unsigned int count = luaL_checkinteger( L, 1 );
+   if ( count > 0 )
+      {
+      AbstractBuffers * buffers = new AbstractBuffers( count );
+      id = kernel->insertObject( buffers );
+      }
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
 int createAbstractConnectors( lua_State * L )
    {
    KernelObjectId id = 0;
@@ -252,7 +293,8 @@ int getSignals( lua_State * L )
    lua_newtable( L );
    for ( unsigned int i = 0; i < count; i ++ )
       {
-      lua_pushnumber( L, i );
+      // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+      lua_pushnumber( L, i + 1 );
       lua_pushnumber( L, connectors->getSignal( baseIndex + i ) );
       lua_rawset( L, -3 );
       }
@@ -276,6 +318,8 @@ int setSignals( lua_State * L )
    lua_pushnil( L );
    while ( lua_next( L, 3 ) != 0 )
       {
+      // Read key and decrease it by 1 to provide compatibility
+      // between C and Lua-style arrays;
       unsigned int key = lua_tointeger( L, -2 ) - 1;
       if ( key < limit ) connectors->setSignal( baseIndex + key, lua_tonumber( L, -1 ) );
       lua_pop( L, 1 );
@@ -314,7 +358,8 @@ int getAbstractWeights( lua_State * L )
       lua_newtable( L );
       for ( unsigned int i = 0; i < neuron->getInputsCount(); i ++ )
          {
-         lua_pushnumber( L, i );
+         // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+         lua_pushnumber( L, i + 1 );
          lua_pushnumber( L, neuron->getWeight( i ) );
          lua_rawset( L, -3 );
          }
@@ -333,7 +378,8 @@ int getAbstractWeights( lua_State * L )
       lua_newtable( L );
       for ( unsigned int i = 0; i < count; i ++ )
          {
-         lua_pushnumber( L, i );
+         // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+         lua_pushnumber( L, i + 1 );
          lua_pushnumber( L, weights->getWeight( baseIndex + i ) );
          lua_rawset( L, -3 );
          }
@@ -412,16 +458,24 @@ int createAbstractNeuron( lua_State * L )
    // Read weightsBaseIndex argument;
    unsigned int weightsBaseIndex = luaL_checkinteger( L, 6 );
 
+   // Read buffers argument;
+   KernelObjectId buffersId = luaL_checkinteger( L, 7 );
+   object = kernel->getObject( buffersId );
+   AbstractBuffers * buffers = dynamic_cast < AbstractBuffers * >( object );
+
+   // Read buffersBaseIndex argument;
+   unsigned int buffersBaseIndex = luaL_checkinteger( L, 8 );
+
    // Read adders argument;
-   KernelObjectId addersId = luaL_checkinteger( L, 7 );
+   KernelObjectId addersId = luaL_checkinteger( L, 9 );
    object = kernel->getObject( addersId );
    AbstractAdders * adders = dynamic_cast < AbstractAdders * >( object );
 
    // Read addersBaseIndex argument;
-   unsigned int addersBaseIndex = luaL_checkinteger( L, 8 );
+   unsigned int addersBaseIndex = luaL_checkinteger( L, 10 );
 
    // Read activationFunction argument;
-   KernelObjectId activationFunctionId = luaL_checkinteger( L, 9 );
+   KernelObjectId activationFunctionId = luaL_checkinteger( L, 11 );
    object = kernel->getObject( activationFunctionId );
    TransferFunction * activationFunction = dynamic_cast < TransferFunction * >( object );
 
@@ -433,6 +487,7 @@ int createAbstractNeuron( lua_State * L )
          inputsCount, inputConnectors,
          connectors, connectorsBaseIndex,
          weights, weightsBaseIndex,
+         buffers, buffersBaseIndex,
          adders, addersBaseIndex,
          activationFunction
          );
@@ -442,12 +497,13 @@ int createAbstractNeuron( lua_State * L )
       AbstractActivators * activators = dynamic_cast < AbstractActivators * >( object );
 
       // Read activatorsBaseIndex argument;
-      unsigned int activatorsBaseIndex = luaL_checkinteger( L, 10 );
+      unsigned int activatorsBaseIndex = luaL_checkinteger( L, 12 );
 
       neuron = new AbstractNeuron(
          inputsCount, inputConnectors,
          connectors, connectorsBaseIndex,
          weights, weightsBaseIndex,
+         buffers, buffersBaseIndex,
          adders, addersBaseIndex,
          activators, activatorsBaseIndex
          );
@@ -478,7 +534,9 @@ int computeAbstractNeurons( lua_State * L )
       lua_pushnil( L );
       while ( lua_next( L, 1 ) != 0 )
          {
-         unsigned int key = lua_tointeger( L, -2 );
+         // Read key and decrease it by 1 to provide compatibility
+         // between C and Lua-style arrays;
+         unsigned int key = lua_tointeger( L, -2 ) - 1;
          if ( key < count )
             {
             neuronId = lua_tointeger( L, -1 );
@@ -503,6 +561,84 @@ int computeAbstractNeurons( lua_State * L )
       }
 
    return 0;
+   };
+
+
+int trainBPAbstractNeurons( lua_State * L )
+   {
+   // Create vector for holding AbstractNeuron pointers;
+   std::vector < AbstractNeuron * > neurons;
+
+   // Read neurons argument;
+   _readKernelObjectsVector( L, 1, AbstractNeuron *, neurons );
+
+   // Create vector for holding neurons per layer count;
+   std::vector < unsigned int > layers;
+
+   // Read layers argument;
+   _readIntegersVector( L, 2, layers );
+
+   // Create array for holding target;
+   unsigned int targetLength = layers[ layers.size() - 1 ];
+   double * target = new double[ targetLength ];
+
+   // Read target argument;
+   readArray( L, 3, targetLength, target );
+
+   // Read damping argument;
+   double damping = luaL_checknumber( L, 4 );
+
+   // Read speed argument;
+   double speed = luaL_checknumber( L, 5 );
+
+   // Calculate neurons;
+   unsigned int neuronsCount = neurons.size();
+   for ( unsigned int i = 0; i < neuronsCount; i ++ )
+      {
+      neurons[ i ]->compute();
+      }
+
+   // Snap deltas for output layer;
+   for ( unsigned int i = 0; i < targetLength; i ++ )
+      {
+      neurons[ neuronsCount - 1 - i ]->snapDelta(
+         target[ i ] - neurons[ neuronsCount - 1 - i ]->getOutput()
+         );
+      }
+
+   // Free target;
+   delete[] target;
+
+   // Snap deltas for the rest layers;
+   unsigned int index = neuronsCount - targetLength - 1;
+   unsigned int prevIndex = neuronsCount - 1;
+   for ( int i = layers.size() - 2; i >= 0 ; i -- )
+      {
+      for ( int j = layers[ i ] - 1; j >= 0; j -- )
+         {
+         // Calculate error;
+         double err = 0.0;
+         for ( int k = layers[ i + 1 ] - 1; k >= 0; k -- )
+            {
+            err += neurons[ prevIndex - k ]->getWeightedDelta( j );
+            }
+
+         neurons[ index ]->snapDelta( err );
+         index --;
+         }
+
+      prevIndex -= layers[ i + 1 ];
+      }
+
+   // Modify weights for all the neurons;
+   for ( unsigned int i = 0; i < neuronsCount; i ++ )
+      {
+      neurons[ i ]->createDampingBuffers();
+      neurons[ i ]->modifyWeights( damping, speed );
+      }
+
+   lua_pushnumber( L, 0 );
+   return 1;
    };
 
 
@@ -641,7 +777,8 @@ int getPotentials( lua_State * L )
    lua_newtable( L );
    for ( unsigned int i = 0; i < count; i ++ )
       {
-      lua_pushnumber( L, i );
+      // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+      lua_pushnumber( L, i + 1 );
       lua_pushnumber( L, wires->getPotential( baseIndex + i ) );
       lua_rawset( L, -3 );
       }
@@ -665,6 +802,8 @@ int setPotentials( lua_State * L )
    lua_pushnil( L );
    while ( lua_next( L, 3 ) != 0 )
       {
+      // Read key and decrease it by 1 to provide compatibility
+      // between C and Lua-style arrays;
       unsigned int key = lua_tointeger( L, -2 ) - 1;
       if ( key < limit ) wires->setPotential( baseIndex + key, lua_tonumber( L, -1 ) );
       lua_pop( L, 1 );
@@ -759,7 +898,9 @@ int computeAnalogNeurons( lua_State * L )
       lua_pushnil( L );
       while ( lua_next( L, 1 ) != 0 )
          {
-         unsigned int key = lua_tointeger( L, -2 );
+         // Read key and decrease it by 1 to provide compatibility
+         // between C and Lua-style arrays;
+         unsigned int key = lua_tointeger( L, -2 ) - 1;
          if ( key < count )
             {
             neuronId = lua_tointeger( L, -1 );
