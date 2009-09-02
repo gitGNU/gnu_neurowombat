@@ -87,10 +87,10 @@ double ExponentialDestribution::generateTime()
  ***************************************************************************/
 
 
-WeibullDestribution::WeibullDestribution( double teta, double beta )
+WeibullDestribution::WeibullDestribution( double theta, double beta )
    : Destribution()
    {
-   this->teta = teta;
+   this->theta = theta;
    this->beta = beta;
    };
 
@@ -109,5 +109,5 @@ Destribution * WeibullDestribution::clone()
 
 double WeibullDestribution::generateTime()
    {
-   return pow( - log( 1.0 - this->genUniformRandomValue() ) / this->teta, 1.0 / this->beta );
+   return pow( - log( 1.0 - this->genUniformRandomValue() ) / this->theta, 1.0 / this->beta );
    };

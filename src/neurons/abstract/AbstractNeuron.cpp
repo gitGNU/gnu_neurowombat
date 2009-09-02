@@ -52,7 +52,7 @@ AbstractNeuron::AbstractNeuron(
    unsigned int buffersBaseIndex,
    AbstractAdders * adders,
    unsigned int addersBaseIndex,
-   TransferFunction * activationFunction
+   ActivationFunction * activationFunction
    )
    : KernelObject()
    {
@@ -126,17 +126,17 @@ unsigned int AbstractNeuron::getInputsCount() const
    };
 
 
-void AbstractNeuron::setupWeights( double * weights, unsigned int count )
+void AbstractNeuron::setWeight( unsigned int index, double weight )
    {
    if ( this->weights == NULL )
       {
-      // Setup built-in weights;
-      memcpy( this->builtInWeights, weights, count * sizeof( double ) );
+      // Set built-in weight;
+      this->builtInWeights[ index ] = weight;
       }
    else
       {
-      // Setup external weights;
-      this->weights->setupWeights( weightsBaseIndex, weights, count );
+      // Set external weight;
+      this->weights->setWeight( weightsBaseIndex + index, weight );
       }
    };
 
@@ -221,7 +221,7 @@ void AbstractNeuron::compute()
       net = adders->getSignalSum( addersBaseIndex );
       }
 
-   // Transfer signal through the activator to neuron's output connector;
+   // Activation signal through the activator to neuron's output connector;
    if ( activators == NULL )
       {
       // Use built-in activation function;

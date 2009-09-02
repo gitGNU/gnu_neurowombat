@@ -150,6 +150,29 @@ KernelObject * KernelObjectTable::getObject( KernelObjectId id )
    };
 
 
+KernelObjectId KernelObjectTable::getId( KernelObject * object )
+   {
+   KernelObjectId id = 0;
+
+   std::map < KernelObjectId, KernelObject * >::iterator entryIterator =
+      this->objects.begin();
+
+   // Try to find id;
+   while ( entryIterator != this->objects.end() )
+      {
+      if ( entryIterator->second == object )
+         {
+         id = entryIterator->first;
+         break;
+         }
+
+      entryIterator ++;
+      }
+
+   return id;
+   };
+
+
 /***************************************************************************
  *   Kernel singleton class implementation                                 *
  ***************************************************************************/
@@ -173,6 +196,13 @@ KernelObject * Kernel::getObject( KernelObjectId id )
    {
    // Try to get object by it's id;
    return this->objectTable.getObject( id );
+   };
+
+
+KernelObjectId Kernel::getId( KernelObject * object )
+   {
+   // Try to get id by object;
+   return this->objectTable.getId( object );
    };
 
 

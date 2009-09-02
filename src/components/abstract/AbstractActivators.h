@@ -23,7 +23,7 @@
 
 
 #include "kernel/KernelObject.h"
-#include "math/TransferFunction.h"
+#include "math/ActivationFunction.h"
 
 
 /***************************************************************************
@@ -36,7 +36,7 @@ class AbstractActivators : public KernelObject
    public:
       AbstractActivators(
          unsigned int count = 0,
-         TransferFunction * transferFunction = NULL
+         ActivationFunction * activationFunction = NULL
          );
       ~AbstractActivators();
 
@@ -48,7 +48,7 @@ class AbstractActivators : public KernelObject
    private:
       unsigned int numNonLinearElements;
       double * analogSignals;
-      TransferFunction * transferFunction;
+      ActivationFunction * activationFunction;
    };
 
 

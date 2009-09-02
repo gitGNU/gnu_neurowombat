@@ -75,14 +75,14 @@ class ExponentialDestribution : public Destribution
 class WeibullDestribution : public Destribution
    {
    public:
-      WeibullDestribution( double teta, double beta );
+      WeibullDestribution( double theta, double beta );
       virtual ~WeibullDestribution();
       virtual Destribution * clone();
 
       virtual double generateTime();
 
    private:
-      double teta;
+      double theta;
       double beta;
    };
 

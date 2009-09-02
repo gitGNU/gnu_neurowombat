@@ -26,17 +26,6 @@
  ***************************************************************************/
 
 
-InterruptManager::InterruptManager()
-   {
-   this->interruptsCount = 0;
-   this->interrupts = NULL;
-   this->numIntSources = 0;
-   this->intSource = -1;
-   this->unlimitRegeneration = false;
-   this->destribution = NULL;
-   };
-
-
 InterruptManager::InterruptManager(
    int numIntSources,
    bool unlimitRegeneration,
@@ -75,6 +64,9 @@ InterruptManager::InterruptManager(
          this->interrupts[ i ] = this->destribution->generateTime();
          }
 
+      // Clear int source;
+      this->intSource = -1;
+
       // Find out interrupt source;
       this->findOutIntSource();
       }
@@ -82,6 +74,7 @@ InterruptManager::InterruptManager(
       {
       this->numIntSources = 0;
       this->intSource = -1;
+      this->lastIntSource = -1;
       this->unlimitRegeneration = false;
       this->destribution = NULL;
       }
@@ -93,7 +86,7 @@ InterruptManager::~InterruptManager()
    // Delete interrupts array;
    if ( this->interrupts != NULL ) delete[] this->interrupts;
 
-   // Release object;
+   // Release captured object;
    if ( this->destribution != NULL ) this->destribution->release();
    };
 
@@ -101,6 +94,18 @@ InterruptManager::~InterruptManager()
 double InterruptManager::getInterrupt()
    {
    return ( ( this->intSource >= 0 ) ? this->interrupts[ this->intSource ] : -1.0 );
+   };
+
+
+int InterruptManager::getLastIntSource()
+   {
+   return this->lastIntSource;
+   };
+
+
+int InterruptManager::getIntSource()
+   {
+   return this->intSource;
    };
 
 
@@ -134,14 +139,17 @@ void InterruptManager::handleInterrupt()
    };
 
 
-int InterruptManager::getIntSource()
+InterruptManager::InterruptManager()
    {
-   return this->intSource;
+   // Do nothing;
    };
 
 
 void InterruptManager::findOutIntSource()
    {
+   // Store last interrupt source;
+   this->lastIntSource = this->intSource;
+
    double min = -1.0;
    this->intSource = -1;
 

@@ -28,7 +28,7 @@
 
 AbstractActivators::AbstractActivators(
    unsigned int count,
-   TransferFunction * transferFunction
+   ActivationFunction * activationFunction
    )
    : KernelObject()
    {
@@ -43,21 +43,17 @@ AbstractActivators::AbstractActivators(
       this->analogSignals = NULL;
       }
 
-   if ( transferFunction != NULL )
-      {
-      this->transferFunction = transferFunction->clone();
-      }
-   else
-      {
-      this->transferFunction = NULL;
-      }
+   this->activationFunction = activationFunction;
+   if ( activationFunction != NULL ) activationFunction->capture();
    };
 
 
 AbstractActivators::~AbstractActivators()
    {
-   if ( this->analogSignals != NULL ) delete[] this->analogSignals;
-   if ( this->transferFunction != NULL ) delete this->transferFunction;
+   if ( analogSignals != NULL ) delete[] analogSignals;
+
+   // Release captured object;
+   if ( activationFunction != NULL ) activationFunction->release();
    };
 
 
@@ -69,11 +65,11 @@ void AbstractActivators::setSignal( unsigned int index, double signal )
 
 double AbstractActivators::getSignal( unsigned int index ) const
    {
-   return this->transferFunction->evaluateFunction( this->analogSignals[ index ] );
+   return this->activationFunction->evaluateFunction( this->analogSignals[ index ] );
    };
 
 
 double AbstractActivators::evaluateDerivative( double x )
    {
-   return this->transferFunction->evaluateDerivative( x );
+   return this->activationFunction->evaluateDerivative( x );
    };

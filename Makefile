@@ -25,8 +25,8 @@ LUA_LIB=	lua5.1
 all:	bin/neurowombat
 
 
-bin/neurowombat:	build/main.o build/api.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractAdders.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/TransferFunction.o build/Destribution.o
-		${CC} -o $@ -ldl -lrt -l${LUA_LIB} build/main.o build/api.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractAdders.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/TransferFunction.o build/Destribution.o
+bin/neurowombat:	build/main.o build/api.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractAdders.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/ActivationFunction.o build/Destribution.o
+		${CC} -o $@ -ldl -lrt -l${LUA_LIB} build/main.o build/api.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractAdders.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/ActivationFunction.o build/Destribution.o
 
 
 build/main.o:	src/main.cpp src/kernel/Kernel.h
@@ -36,14 +36,14 @@ build/main.o:	src/main.cpp src/kernel/Kernel.h
 # api
 
 
-build/api.o:	src/api/api.cpp src/api/api.h src/kernel/Kernel.h src/components/abstract/AbstractActivators.h src/components/abstract/AbstractAdders.h src/components/abstract/AbstractBuffers.h src/components/abstract/AbstractConnectors.h src/components/abstract/AbstractWeights.h src/neurons/abstract/AbstractNeuron.h src/components/analog/AnalogComparators.h src/components/analog/AnalogResistors.h src/components/analog/AnalogWires.h src/neurons/analog/AnalogNeuron.h src/engine/SimulationEngine.h src/math/Destribution.h src/math/TransferFunction.h
+build/api.o:	src/api/api.cpp src/api/api.h src/kernel/Kernel.h src/components/abstract/AbstractActivators.h src/components/abstract/AbstractAdders.h src/components/abstract/AbstractBuffers.h src/components/abstract/AbstractConnectors.h src/components/abstract/AbstractWeights.h src/neurons/abstract/AbstractNeuron.h src/components/analog/AnalogComparators.h src/components/analog/AnalogResistors.h src/components/analog/AnalogWires.h src/neurons/analog/AnalogNeuron.h src/engine/SimulationEngine.h src/math/Destribution.h src/math/ActivationFunction.h
 		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/api/api.cpp
 
 
 # coponents - abstract
 
 
-build/AbstractActivators.o:	src/components/abstract/AbstractActivators.cpp src/components/abstract/AbstractActivators.h src/kernel/KernelObject.h src/math/TransferFunction.h
+build/AbstractActivators.o:	src/components/abstract/AbstractActivators.cpp src/components/abstract/AbstractActivators.h src/kernel/KernelObject.h src/math/ActivationFunction.h
 		${CC} -c -o $@ -Isrc src/components/abstract/AbstractActivators.cpp
 
 
@@ -121,8 +121,8 @@ build/Destribution.o:	src/math/Destribution.cpp src/math/Destribution.h src/kern
 		${CC} -c -o $@ -Isrc src/math/Destribution.cpp
 
 
-build/TransferFunction.o:	src/math/TransferFunction.cpp src/math/TransferFunction.h src/kernel/KernelObject.h
-		${CC} -c -o $@ -Isrc src/math/TransferFunction.cpp
+build/ActivationFunction.o:	src/math/ActivationFunction.cpp src/math/ActivationFunction.h src/kernel/KernelObject.h
+		${CC} -c -o $@ -Isrc src/math/ActivationFunction.cpp
 
 
 clean:

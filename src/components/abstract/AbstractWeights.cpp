@@ -52,12 +52,6 @@ unsigned int AbstractWeights::count() const
    };
 
 
-void AbstractWeights::setupWeights( unsigned int baseIndex, double * weights, unsigned int count )
-   {
-   memcpy( & this->weights[ baseIndex ], weights, count * sizeof( double ) );
-   };
-
-
 void AbstractWeights::setWeight( unsigned int index, double weight )
    {
    this->weights[ index ] = weight;
@@ -115,10 +109,10 @@ AbstractWeightsManager::~AbstractWeightsManager()
 void AbstractWeightsManager::handleInterrupt()
    {
    // Break up weight;
-   int resistorIndex = this->getIntSource();
-   if ( resistorIndex >= 0 && this->abstractWeights != NULL )
+   int weightIndex = this->getIntSource();
+   if ( weightIndex >= 0 && this->abstractWeights != NULL )
       {
-      this->abstractWeights->setWeight( resistorIndex, 0.0 );
+      this->abstractWeights->setWeight( weightIndex, 0.0 );
       }
 
    // Pass control to base implementation;

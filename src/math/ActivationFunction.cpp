@@ -21,95 +21,95 @@
 #include <math.h>
 
 
-#include "TransferFunction.h"
+#include "ActivationFunction.h"
 
 
 /***************************************************************************
- *   TransferFunction abstract class implementation                        *
+ *   ActivationFunction abstract class implementation                      *
  ***************************************************************************/
 
 
-TransferFunction::TransferFunction()
+ActivationFunction::ActivationFunction()
    : KernelObject()
    {
    // Do nothing;
    };
 
 
-TransferFunction::~TransferFunction()
+ActivationFunction::~ActivationFunction()
    {
    // Do nothing;
    };
 
 
 /***************************************************************************
- *   LinearTransferFunction class implementation                           *
+ *   LinearActivationFunction class implementation                         *
  ***************************************************************************/
 
 
-LinearTransferFunction::LinearTransferFunction( double a, double b )
-   : TransferFunction()
+LinearActivationFunction::LinearActivationFunction( double a, double b )
+   : ActivationFunction()
    {
    this->a = a;
    this->b = b;
    };
 
 
-LinearTransferFunction::~LinearTransferFunction()
+LinearActivationFunction::~LinearActivationFunction()
    {
    // Do nothing;
    };
 
 
-TransferFunction * LinearTransferFunction::clone()
+ActivationFunction * LinearActivationFunction::clone()
    {
-   return new LinearTransferFunction( * this );
+   return new LinearActivationFunction( * this );
    };
 
 
-double LinearTransferFunction::evaluateFunction( double x )
+double LinearActivationFunction::evaluateFunction( double x )
    {
    return this->a * x + this->b;
    };
 
 
-double LinearTransferFunction::evaluateDerivative( double x )
+double LinearActivationFunction::evaluateDerivative( double x )
    {
    return this->a;
    };
 
 
 /***************************************************************************
- *   SigmoidTransferFunction class implementation                          *
+ *   SigmoidActivationFunction class implementation                        *
  ***************************************************************************/
 
 
-SigmoidTransferFunction::SigmoidTransferFunction()
-   : TransferFunction()
+SigmoidActivationFunction::SigmoidActivationFunction()
+   : ActivationFunction()
    {
    // Do nothing;
    };
 
 
-SigmoidTransferFunction::~SigmoidTransferFunction()
+SigmoidActivationFunction::~SigmoidActivationFunction()
    {
    // Do nothing;
    };
 
 
-TransferFunction * SigmoidTransferFunction::clone()
+ActivationFunction * SigmoidActivationFunction::clone()
    {
-   return new SigmoidTransferFunction( * this );
+   return new SigmoidActivationFunction( * this );
    };
 
 
-double SigmoidTransferFunction::evaluateFunction( double x )
+double SigmoidActivationFunction::evaluateFunction( double x )
    {
    return ( 1.0 / ( 1.0 + exp( - x ) ) );
    };
 
 
-double SigmoidTransferFunction::evaluateDerivative( double x )
+double SigmoidActivationFunction::evaluateDerivative( double x )
    {
    double f = 1.0 / ( 1.0 + exp( - x ) );
    return f * ( 1 - f );

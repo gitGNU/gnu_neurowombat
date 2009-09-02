@@ -18,24 +18,24 @@
  ***************************************************************************/
 
 
-#ifndef TRANSFERFUNCTION_H
-#define TRANSFERFUNCTION_H
+#ifndef ACTIVATIONFUNCTION_H
+#define ACTIVATIONFUNCTION_H
 
 
 #include "kernel/KernelObject.h"
 
 
 /***************************************************************************
- *   TransferFunction abstract class declaration                           *
+ *   ActivationFunction abstract class declaration                         *
  ***************************************************************************/
 
 
-class TransferFunction : public KernelObject
+class ActivationFunction : public KernelObject
    {
    public:
-      TransferFunction();
-      virtual ~TransferFunction();
-      virtual TransferFunction * clone() = 0;
+      ActivationFunction();
+      virtual ~ActivationFunction();
+      virtual ActivationFunction * clone() = 0;
 
       virtual double evaluateFunction( double x ) = 0;
       virtual double evaluateDerivative( double x ) = 0;
@@ -43,16 +43,16 @@ class TransferFunction : public KernelObject
 
 
 /***************************************************************************
- *   LinearTransferFunction class declaration                              *
+ *   LinearActivationFunction class declaration                            *
  ***************************************************************************/
 
 
-class LinearTransferFunction : public TransferFunction
+class LinearActivationFunction : public ActivationFunction
    {
    public:
-      LinearTransferFunction( double a, double b );
-      virtual ~LinearTransferFunction();
-      virtual TransferFunction * clone();
+      LinearActivationFunction( double a, double b );
+      virtual ~LinearActivationFunction();
+      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
@@ -64,16 +64,16 @@ class LinearTransferFunction : public TransferFunction
 
 
 /***************************************************************************
- *   SigmoidTransferFunction class declaration                             *
+ *   SigmoidActivationFunction class declaration                           *
  ***************************************************************************/
 
 
-class SigmoidTransferFunction : public TransferFunction
+class SigmoidActivationFunction : public ActivationFunction
    {
    public:
-      SigmoidTransferFunction();
-      virtual ~SigmoidTransferFunction();
-      virtual TransferFunction * clone();
+      SigmoidActivationFunction();
+      virtual ~SigmoidActivationFunction();
+      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );

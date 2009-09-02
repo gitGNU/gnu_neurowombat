@@ -16,7 +16,7 @@
 --   along with NeuroWombat.  If not, see <http://www.gnu.org/licenses/>.
 
 
--- Hopfield neural network script ( 16 neurons ). Network task is to 
+-- Hamming neural network script ( 4 neurons ). Network task is to 
 -- classify 4x4 images. It works as associative memory and returns one 
 -- of the base images for every input image. There are 2 base images:
 -- ####     ....
@@ -31,7 +31,7 @@
 -- #..#     ###.
 -- Otherwise it is considered to be in a fault state.
 
--- Function for testing Hopfield network;
+-- Function for testing Hamming network;
 function testNetwork()
    local x = {};
    local hitsCount = 0;
@@ -41,7 +41,7 @@ function testNetwork()
    for i = 1, 100 do
       local bottomPatternCounter = 0;
       local topPatternCounter = 0;
-      for j = 1, N do
+      for j = 1, inputsCount do
          if ( ( i <= 50 and j <= 8 ) or ( i > 50 and j > 8 ) ) then
             if math.random ( 4 ) == 1 then x[ j ] = 1.0;
             else x[ j ] = -1.0; end
@@ -55,33 +55,22 @@ function testNetwork()
          end
 
       setPotentials( wires, 2, x );
-      computeAnalogNeurons( neurons, 4 );
-      local y = getPotentials( wires, 2, N );
+      computeAnalogNeurons( neuronsHm, 1 );
+      computeAnalogNeurons( neuronsHp, 4 );
+      local y = getPotentials( wires, 2 + inputsCount, layer );
 
       -- Analize result;
-      local isTopPatern = true;
-      local isBottomPatern = true;
-      for j = 1, N do
-         if j <= 8 then
-            if y[ j ] ~= 1.0 then isTopPatern = false; end
-            if y[ j ] ~= -1.0 then isBottomPatern = false; end
-         else
-            if y[ j ] ~= -1.0 then isTopPatern = false; end
-            if y[ j ] ~= 1.0 then isBottomPatern = false; end
-            end
-         end
-
       if topPatternCounter == bottomPatternCounter then totalCount = totalCount - 1; end
 
-      if ( topPatternCounter > bottomPatternCounter and isTopPatern or
-         topPatternCounter < bottomPatternCounter and isBottomPatern
+      if ( topPatternCounter > bottomPatternCounter and y[ 1 ] == 1.0 and y[ 2 ] == -1.0 or
+         topPatternCounter < bottomPatternCounter and y[ 1 ] == -1.0 and y[ 2 ] == 1.0 
          ) then hitsCount = hitsCount + 1; end
       end
 
    return ( hitsCount / totalCount >= 0.90 );
-end
+   end
 
--- Function for estimating time to fail of Hopfield network;
+-- Function for estimating time to fail of Hamming network;
 function estimateTimeToFail( times, lambda )
    local t = 0.0;
    local tsqr = 0.0;
@@ -105,17 +94,15 @@ function estimateTimeToFail( times, lambda )
       closeId( engine );
       closeId( manager );
       closeId( destr );
-      io.write( i .. "" ); io.flush();
       end
 
-   print( "end" );
    t = t / times;
    tsqr = tsqr / times;
    local d = calcMeanCI( t, tsqr, times, 0.95 );
    return t, t - d, t + d;
    end
 
--- Function for estimating survival function of Hopfield network;
+-- Function for estimating survival function of Hamming network;
 function estimateSurvivalFunction( times, lambda, t )
    local p = 0.0;
    for i = 1, times do
@@ -148,10 +135,10 @@ function estimateSurvivalFunction( times, lambda, t )
    return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
--- Function for estimating faults count destribution of Hopfield network;
+-- Function for estimating faults count destribution of Hamming network;
 function estimateFaultsCountDestribution( times, lambda )
    local d = {};
-   for i = 0, N * ( N - 1 ) * 2 do d[ i ] = 0 end
+   for i = 0, resistorsCount do d[ i ] = 0 end
    for i = 1, times do
       trainNetwork( trainVectors );
       local destr = createExponentialDestribution( lambda );
@@ -173,11 +160,11 @@ function estimateFaultsCountDestribution( times, lambda )
       closeId( destr );
       end
 
-   -- for i = 0, N * ( N - 1 ) * 2 do d[ i ] = d[ i ] / times end
+   for i = 0, resistorsCount do d[ i ] = d[ i ] / times end
    return d;
    end
 
--- Function for estimating resistor importance of Hopfield network;
+-- Function for estimating resistor importance of Hamming network;
 function estimateWeightImportance( times, lambda, resistorIndex, t )
    local p = 0.0;
    local m = 0; local s = -1;
@@ -208,62 +195,85 @@ function estimateWeightImportance( times, lambda, resistorIndex, t )
    return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
--- Function for training Hopfield network;
+-- Function for training Hamming network;
 function trainNetwork( vectors )
-   for i = 0, N - 1 do
-      w = {};
-      for j = 0, N - 2 do
-         w[ j + 1 ] = 0.0;
-         if j >= i then
-            for k = 1, #vectors do
-               w[ j + 1 ] = w[ j + 1 ] + vectors[ k ][ i + 1 ] * vectors[ k ][ j + 2 ];
-               end
-         else
-            for k = 1, #vectors do
-               w[ j + 1 ] = w[ j + 1 ] + vectors[ k ][ i + 1 ] * vectors[ k ][ j + 1 ];
-               end
-            end
-
-         w[ j + 1 ] = w[ j + 1 ] / N;
+   w = {};
+   for i = 0, layer - 1 do
+      for j = 1, inputsCount do
+         w[ j ] = 0.5 * vectors[ i + 1 ][ j ];
          end
 
-         setupAnalogResistors( resistors, 2 * ( N - 1 ) * i, N - 1, w, 2 );
+      setupAnalogResistors( resistors, inputsCount * i, inputsCount, w, 1 );
+      end
+
+   w = {};
+   for i = 0, layer - 1 do
+      for j = 0, layer - 1 do
+         if i ~= j then w[ j + 1 ] = -1.0 / layer;
+         else w[ j + 1 ] = 1.0; end
+         end
+
+      setupAnalogResistors( resistors, inputsCount * layer + 2 * layer * i, layer, w, 2 );
       end
    end
 
 print( "API version: " .. apiVersion() );
 
--- Create analog components for Hopfield network;
-N = 16;
+-- Set inputs count in each neuron of the first layer;
+inputsCount = 16;
+
+-- Set neurons count in Hamming and Hopfield layers;
+layer = 2;
+
+-- Calculate total comparators, resistors and wires count;
+comparatorsCount = layer;
+resistorsCount = inputsCount * layer + 2 * layer * layer;
+wiresCount = 2 + inputsCount + layer;
+
+-- Create analog components for Hamming network;
 io.write( "Creating analog components ... " ); io.flush();
-comparators = createAnalogComparators( N );
-resistors = createAnalogResistors( N * ( N - 1 ) * 2 );
-wires = createAnalogWires( 2 + N );
+comparators = createAnalogComparators( comparatorsCount );
+resistors = createAnalogResistors( resistorsCount );
+wires = createAnalogWires( wiresCount );
 print( "[OK]" );
 
--- Create neurons layer;
-io.write( "Assembling Hopfield network ( 16 neurons ) ... " ); io.flush();
-neurons = {};
-for i = 0, N - 1 do
-   inputWires = {};
-   for j = 0, N - 2 do
-      if j >= i then inputWires[ j + 1 ] = j + 3;
-      else inputWires[ j + 1 ] = j + 2; end
-      end
+-- Create Hamming and Hopfield layers;
+io.write( "Assembling Hamming network ( 4 neurons ) ... " ); io.flush();
+neuronsHm = {};
+neuronsHp = {};
+hmInputWires = {};
+for j = 0, inputsCount - 1 do
+   hmInputWires[ j + 1 ] = 2 + j;
+   end
 
-   neurons[ i + 1 ] = createAnalogNeuron(
-      N - 1,
-      inputWires,
+hpInputWires = {};
+for j = 0, layer - 1 do
+   hpInputWires[ j + 1 ] = 2 + inputsCount + j;
+   end
+
+for i = 0, layer - 1 do
+   neuronsHm[ i + 1 ] = createAnalogNeuron(
+      inputsCount,
+      hmInputWires,
+      0, 1,
+      0, 0,
+      resistors, inputsCount * i,
+      wires, 2 + inputsCount + i
+      );
+
+   neuronsHp[ i + 1 ] = createAnalogNeuron(
+      layer,
+      hpInputWires,
       0, 1,
       comparators, i,
-      resistors, ( N - 1 ) * i * 2,
-      wires, 2 + i
+      resistors, inputsCount * layer + layer * i * 2,
+      wires, 2 + inputsCount + i
       );
    end
 
 print( "[OK]" );
 
--- Train Hopfield network;
+-- Train Hamming network;
 io.write( "Training ... " ); io.flush();
 trainVectors = {
    { 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1 },
@@ -277,28 +287,30 @@ print( "[OK]" );
 io.write( "Simulating ... " ); io.flush();
 print( "[OK]" );
 
-length = 7; x = {};
+length = 10; x = {};
 -- start = 0.00001; stop = 0.0001; delta = ( stop - start ) / ( length - 1 );
--- start = 0.0; stop = 20000.0; delta = ( stop - start ) / ( length - 1 );
-start = 9000.0; stop = 25000.0; delta = ( stop - start ) / ( length - 1 );
+-- start = 0.0; stop = 5000.0; delta = ( stop - start ) / ( length - 1 );
+start = 0.0; stop = 23000.0; delta = ( stop - start ) / ( length - 1 );
 for i = 0, length - 1 do
    x[ i ] = start + i * delta;
-   -- y, dyl, dyh = estimateTimeToFail( 121, x[ i ] );
-   -- y, dyl, dyh = estimateSurvivalFunction( 500, 0.0001, x[ i ] );
-   y, dyl, dyh = estimateWeightImportance( 1000, 0.0001, 0, x[ i ] );
+   -- y, dyl, dyh = estimateTimeToFail( 250, x[ i ] );
+   -- y, dyl, dyh = estimateSurvivalFunction( 2000, 0.0001, x[ i ] );
+   y, dyl, dyh = estimateWeightImportance( 2000, 0.0001, 0, x[ i ] );
+   y1, dyl1, dyh1 = estimateWeightImportance( 2000, 0.0001, 32, x[ i ] );
    -- print( x[ i ] * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
    -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
-   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh .. " " .. dyl1 .. " " .. y1 .. " " .. dyh1 );
    end;
 
 -- destr = estimateFaultsCountDestribution( 1000, 0.0001 );
--- for i = 0, N * ( N - 1 ) * 2 do
+-- for i = 0, resistorsCount do
    -- print( i .. " " .. destr[ i ] );
    -- end
 
 -- Close objects;
-for i = 1, N do
-   closeId( neurons[ i ] );
+for i = 1, layer do
+   closeId( neuronsHm[ i ] );
+   closeId( neuronsHp[ i ] );
    end
 
 closeId( comparators );

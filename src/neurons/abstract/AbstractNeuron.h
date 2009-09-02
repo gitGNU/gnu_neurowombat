@@ -70,7 +70,7 @@ class AbstractNeuron : public KernelObject
          unsigned int buffersBaseIndex,
          AbstractAdders * adders,
          unsigned int addersBaseIndex,
-         TransferFunction * activationFunction
+         ActivationFunction * activationFunction
          );
 
       AbstractNeuron(
@@ -91,7 +91,7 @@ class AbstractNeuron : public KernelObject
 
       unsigned int getInputsCount() const;
 
-      void setupWeights( double * weights, unsigned int count );
+      void setWeight( unsigned int index, double weight );
       double getWeight( unsigned int index );
 
       double getOutput();
@@ -139,7 +139,7 @@ class AbstractNeuron : public KernelObject
       AbstractBuffers * buffers;
       unsigned int buffersBaseIndex;
 
-      TransferFunction * activationFunction;
+      ActivationFunction * activationFunction;
       AbstractActivators * activators;
       unsigned int activatorsBaseIndex;
 

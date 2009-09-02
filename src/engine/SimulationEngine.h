@@ -48,10 +48,18 @@ class SimulationEngine : public KernelObject
       bool stepOver();
 
       double getCurrentTime();
+      double getFutureTime();
+      InterruptManager * getCurrentIntSource();
+      InterruptManager * getFutureIntSource();
 
    private:
+      // Most time-consuming operation;
+      InterruptManager * findOutIntSource();
+
       std::vector< InterruptManager * > managers;
       double currentTime;
+      InterruptManager * currentIntSource;
+      InterruptManager * futureIntSource;
    };
 
 

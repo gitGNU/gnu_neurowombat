@@ -107,6 +107,12 @@ extern "C" int createAnalogResistors( lua_State * L );
 extern "C" int setupAnalogResistors( lua_State * L );
 
 
+extern "C" int getAnalogResistances( lua_State * L );
+
+
+extern "C" int setAnalogResistances( lua_State * L );
+
+
 extern "C" int createAnalogWires( lua_State * L );
 
 
@@ -131,6 +137,12 @@ extern "C" int createLinearActFunc( lua_State * L );
 
 
 extern "C" int createSigmoidActFunc( lua_State * L );
+
+
+extern "C" int calcMeanCI( lua_State * L );
+
+
+extern "C" int calcACProbabilityCI( lua_State * L );
 
 
 /***************************************************************************
@@ -160,6 +172,15 @@ extern "C" int stepOverEngine( lua_State * L );
 
 
 extern "C" int getCurrentTime( lua_State * L );
+
+
+extern "C" int getFutureTime( lua_State * L );
+
+
+extern "C" int getCurrentSource( lua_State * L );
+
+
+extern "C" int getFutureSource( lua_State * L );
 
 
 #endif

@@ -53,6 +53,7 @@ class KernelObjectTable
       void clear();
 
       KernelObject * getObject( KernelObjectId id );
+      KernelObjectId getId( KernelObject * object );
    private:
       bool idSearchRequired;
       unsigned int idCount;
@@ -76,6 +77,7 @@ class Kernel : public Singleton < Kernel >
       KernelObjectId insertObject( KernelObject * object );
       void deleteObject( KernelObjectId id );
       KernelObject * getObject( KernelObjectId id );
+      KernelObjectId getId( KernelObject * object );
 
       void doFile( const char * fileName );
 
