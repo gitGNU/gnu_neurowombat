@@ -25,9 +25,9 @@
 #include "exceptions.h"
 #include "kernel/KernelObject.h"
 #include "components/abstract/AbstractActivators.h"
-#include "components/abstract/AbstractAdders.h"
 #include "components/abstract/AbstractBuffers.h"
 #include "components/abstract/AbstractConnectors.h"
+#include "components/abstract/AbstractProcessor.h"
 #include "components/abstract/AbstractWeights.h"
 
 
@@ -68,8 +68,7 @@ class AbstractNeuron : public KernelObject
          unsigned int weightsBaseIndex,
          AbstractBuffers * buffers,
          unsigned int buffersBaseIndex,
-         AbstractAdders * adders,
-         unsigned int addersBaseIndex,
+         AbstractProcessor * processor,
          ActivationFunction * activationFunction
          );
 
@@ -82,8 +81,7 @@ class AbstractNeuron : public KernelObject
          unsigned int weightsBaseIndex,
          AbstractBuffers * buffers,
          unsigned int buffersBaseIndex,
-         AbstractAdders * adders,
-         unsigned int addersBaseIndex,
+         AbstractProcessor * processor,
          AbstractActivators * activators,
          unsigned int activatorsBaseIndex
          );
@@ -120,8 +118,7 @@ class AbstractNeuron : public KernelObject
          unsigned int weightsBaseIndex,
          AbstractBuffers * buffers,
          unsigned int buffersBaseIndex,
-         AbstractAdders * adders,
-         unsigned int addersBaseIndex
+         AbstractProcessor * processor
          );
 
       unsigned int inputsCount;
@@ -143,10 +140,9 @@ class AbstractNeuron : public KernelObject
       AbstractActivators * activators;
       unsigned int activatorsBaseIndex;
 
-      AbstractAdders * adders;
-      unsigned int addersBaseIndex;
+      AbstractProcessor * processor;
 
-      double net;
+      double processorOut;
       double delta;
    };
 

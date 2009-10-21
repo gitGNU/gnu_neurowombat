@@ -50,8 +50,7 @@ AbstractNeuron::AbstractNeuron(
    unsigned int weightsBaseIndex,
    AbstractBuffers * buffers,
    unsigned int buffersBaseIndex,
-   AbstractAdders * adders,
-   unsigned int addersBaseIndex,
+   AbstractProcessor * processor,
    ActivationFunction * activationFunction
    )
    : KernelObject()
@@ -61,7 +60,7 @@ AbstractNeuron::AbstractNeuron(
       connectors, connectorsBaseIndex,
       weights, weightsBaseIndex,
       buffers, buffersBaseIndex,
-      adders, addersBaseIndex
+      processor
       );
 
    // Setup activationFunction;
@@ -81,8 +80,7 @@ AbstractNeuron::AbstractNeuron(
    unsigned int weightsBaseIndex,
    AbstractBuffers * buffers,
    unsigned int buffersBaseIndex,
-   AbstractAdders * adders,
-   unsigned int addersBaseIndex,
+   AbstractProcessor * processor,
    AbstractActivators * activators,
    unsigned int activatorsBaseIndex
    )
@@ -93,7 +91,7 @@ AbstractNeuron::AbstractNeuron(
       connectors, connectorsBaseIndex,
       weights, weightsBaseIndex,
       buffers, buffersBaseIndex,
-      adders, addersBaseIndex
+      processor
       );
 
    // Setup activators;
@@ -116,7 +114,7 @@ AbstractNeuron::~AbstractNeuron()
    if ( buffers != NULL ) buffers->release();
    if ( activationFunction != NULL ) activationFunction->release();
    if ( activators != NULL ) activators->release();
-   if ( adders != NULL ) adders->release();
+   if ( processor != NULL ) processor->release();
    };
 
 
@@ -164,62 +162,11 @@ double AbstractNeuron::getOutput()
 
 void AbstractNeuron::compute()
    {
-   // Calculate weighted sum of input signals;
-   net = 0.0;
-   if ( adders == NULL )
-      {
-      // Use built-in adder;
-      if ( weights == NULL )
-         {
-         // Use build-in weights;
-         for ( unsigned int i = 0; i < inputsCount; i ++ )
-            {
-            net += builtInWeights[ i ] *
-               connectors->getSignal( inputConnectors[ i ] );
-            }
-         }
-      else
-         {
-         // Use external weights;
-         for ( unsigned int i = 0; i < inputsCount; i ++ )
-            {
-            net += weights->getWeight( weightsBaseIndex + i ) *
-               connectors->getSignal( inputConnectors[ i ] );
-            }
-         }
-      }
-   else
-      {
-      // Use external adder;
-      adders->resetSignalSum( addersBaseIndex );
-
-      if ( weights == NULL )
-         {
-         // Use build-in weights;
-         for ( unsigned int i = 0; i < inputsCount; i ++ )
-            {
-            adders->addToSignalSum(
-               addersBaseIndex,
-               builtInWeights[ i ] *
-                  connectors->getSignal( inputConnectors[ i ] )
-               );
-            }
-         }
-      else
-         {
-         // Use external weights;
-         for ( unsigned int i = 0; i < inputsCount; i ++ )
-            {
-            adders->addToSignalSum(
-               addersBaseIndex,
-               weights->getWeight( weightsBaseIndex + i ) *
-                  connectors->getSignal( inputConnectors[ i ] )
-               );
-            }
-         }
-
-      net = adders->getSignalSum( addersBaseIndex );
-      }
+   // Calculate processor out;
+   processorOut = processor->process(
+      inputsCount, inputConnectors, connectors,
+      builtInWeights, weights, weightsBaseIndex
+      );
 
    // Activation signal through the activator to neuron's output connector;
    if ( activators == NULL )
@@ -227,13 +174,13 @@ void AbstractNeuron::compute()
       // Use built-in activation function;
       connectors->setSignal(
          connectorsBaseIndex,
-         activationFunction->evaluateFunction( net )
+         activationFunction->evaluateFunction( processorOut )
          );
       }
    else
       {
       // Use external activator;
-      activators->setSignal( activatorsBaseIndex, net );
+      activators->setSignal( activatorsBaseIndex, processorOut );
       connectors->setSignal(
          connectorsBaseIndex,
          activators->getSignal( activatorsBaseIndex )
@@ -265,12 +212,12 @@ void AbstractNeuron::snapDelta( double err )
    if ( activators == NULL )
       {
       // Use built-in activation function;
-      delta *= activationFunction->evaluateDerivative( net );
+      delta *= activationFunction->evaluateDerivative( processorOut );
       }
    else
       {
       // Use external activator;
-      delta *= activators->evaluateDerivative( net );
+      delta *= activators->evaluateDerivative( processorOut );
       }
    };
 
@@ -378,8 +325,7 @@ inline void AbstractNeuron::sharedConstructor(
    unsigned int weightsBaseIndex,
    AbstractBuffers * buffers,
    unsigned int buffersBaseIndex,
-   AbstractAdders * adders,
-   unsigned int addersBaseIndex
+   AbstractProcessor * processor
    )
    {
    this->inputsCount = inputsCount;
@@ -429,13 +375,12 @@ inline void AbstractNeuron::sharedConstructor(
    this->buffersBaseIndex = buffersBaseIndex;
    if ( buffers != NULL ) buffers->capture();
 
-   // Setup adders;
-   this->adders = adders;
-   this->addersBaseIndex = addersBaseIndex;
-   if ( adders != NULL ) adders->capture();
+   // Setup processor;
+   this->processor = processor;
+   if ( processor != NULL ) processor->capture();
 
-   // Setup net;
-   this->net = 0.0;
+   // Setup processorOut;
+   this->processorOut = 0.0;
 
    // Setup delta;
    this->delta = 0.0;

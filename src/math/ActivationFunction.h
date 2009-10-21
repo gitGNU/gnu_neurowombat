@@ -22,6 +22,9 @@
 #define ACTIVATIONFUNCTION_H
 
 
+#include <lua.hpp>
+
+
 #include "kernel/KernelObject.h"
 
 
@@ -39,6 +42,70 @@ class ActivationFunction : public KernelObject
 
       virtual double evaluateFunction( double x ) = 0;
       virtual double evaluateDerivative( double x ) = 0;
+   };
+
+
+/***************************************************************************
+ *   CustomActivationFunction class declaration                            *
+ ***************************************************************************/
+
+
+class CustomActivationFunction : public ActivationFunction
+   {
+   public:
+      CustomActivationFunction( lua_State * L, int functionRef, int derivativeRef );
+      virtual ~CustomActivationFunction();
+      virtual ActivationFunction * clone();
+
+      virtual double evaluateFunction( double x );
+      virtual double evaluateDerivative( double x );
+
+   private:
+      lua_State * L;
+      int functionRef;
+      int derivativeRef;
+   };
+
+
+/***************************************************************************
+ *   GaussianActivationFunction class declaration                          *
+ ***************************************************************************/
+
+
+class GaussianActivationFunction : public ActivationFunction
+   {
+   public:
+      GaussianActivationFunction( double beta );
+      virtual ~GaussianActivationFunction();
+      virtual ActivationFunction * clone();
+
+      virtual double evaluateFunction( double x );
+      virtual double evaluateDerivative( double x );
+
+   private:
+      double beta;
+   };
+
+
+/***************************************************************************
+ *   LimActivationFunction class declaration                               *
+ ***************************************************************************/
+
+
+class LimActivationFunction : public ActivationFunction
+   {
+   public:
+      LimActivationFunction( double xLim, double yLow, double yHigh );
+      virtual ~LimActivationFunction();
+      virtual ActivationFunction * clone();
+
+      virtual double evaluateFunction( double x );
+      virtual double evaluateDerivative( double x );
+
+   private:
+      double xLim;
+      double yLow;
+      double yHigh;
    };
 
 
@@ -64,6 +131,50 @@ class LinearActivationFunction : public ActivationFunction
 
 
 /***************************************************************************
+ *   LimLinearActivationFunction class declaration                         *
+ ***************************************************************************/
+
+
+class LimLinearActivationFunction : public ActivationFunction
+   {
+   public:
+      LimLinearActivationFunction( double a, double b, double xMin, double xMax );
+      virtual ~LimLinearActivationFunction();
+      virtual ActivationFunction * clone();
+
+      virtual double evaluateFunction( double x );
+      virtual double evaluateDerivative( double x );
+
+   private:
+      double a;
+      double b;
+      double xMin;
+      double xMax;
+   };
+
+
+/***************************************************************************
+ *   PosLinearActivationFunction class declaration                         *
+ ***************************************************************************/
+
+
+class PosLinearActivationFunction : public ActivationFunction
+   {
+   public:
+      PosLinearActivationFunction( double a, double b );
+      virtual ~PosLinearActivationFunction();
+      virtual ActivationFunction * clone();
+
+      virtual double evaluateFunction( double x );
+      virtual double evaluateDerivative( double x );
+
+   private:
+      double a;
+      double b;
+   };
+
+
+/***************************************************************************
  *   SigmoidActivationFunction class declaration                           *
  ***************************************************************************/
 
@@ -73,6 +184,23 @@ class SigmoidActivationFunction : public ActivationFunction
    public:
       SigmoidActivationFunction();
       virtual ~SigmoidActivationFunction();
+      virtual ActivationFunction * clone();
+
+      virtual double evaluateFunction( double x );
+      virtual double evaluateDerivative( double x );
+   };
+
+
+/***************************************************************************
+ *   ThSigmoidActivationFunction class declaration                         *
+ ***************************************************************************/
+
+
+class ThSigmoidActivationFunction : public ActivationFunction
+   {
+   public:
+      ThSigmoidActivationFunction();
+      virtual ~ThSigmoidActivationFunction();
       virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );

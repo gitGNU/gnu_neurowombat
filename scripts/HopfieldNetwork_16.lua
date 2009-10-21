@@ -31,6 +31,8 @@
 -- #..#     ###.
 -- Otherwise it is considered to be in a fault state.
 
+require "analog.HopfieldNetwork";
+
 -- Function for testing Hopfield network;
 function testNetwork()
    local x = {};
@@ -41,7 +43,7 @@ function testNetwork()
    for i = 1, 100 do
       local bottomPatternCounter = 0;
       local topPatternCounter = 0;
-      for j = 1, N do
+      for j = 1, net.neuronsCount do
          if ( ( i <= 50 and j <= 8 ) or ( i > 50 and j > 8 ) ) then
             if math.random ( 4 ) == 1 then x[ j ] = 1.0;
             else x[ j ] = -1.0; end
@@ -54,14 +56,12 @@ function testNetwork()
          if ( j > 8 and x[ j ] == 1.0 ) then bottomPatternCounter = bottomPatternCounter + 1; end
          end
 
-      setPotentials( wires, 2, x );
-      computeAnalogNeurons( neurons, 4 );
-      local y = getPotentials( wires, 2, N );
+      local y = analog.HopfieldNetwork.compute( net, x, 4 );
 
       -- Analize result;
       local isTopPatern = true;
       local isBottomPatern = true;
-      for j = 1, N do
+      for j = 1, net.neuronsCount do
          if j <= 8 then
             if y[ j ] ~= 1.0 then isTopPatern = false; end
             if y[ j ] ~= -1.0 then isBottomPatern = false; end
@@ -81,14 +81,38 @@ function testNetwork()
    return ( hitsCount / totalCount >= 0.90 );
 end
 
+-- Function for estimating time to fail destribution of Hopfield network;
+function estimateTimeToFailDestribution( times, lambda )
+   local d = {};
+   for i = 1, times do
+      analog.HopfieldNetwork.train( net, trainVectors );
+      local destr = createExponentialDestribution( lambda );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
+      local engine = createSimulationEngine();
+      appendInterruptManager( engine, manager );
+
+      while stepOverEngine( engine ) do
+         if not testNetwork() then break end
+         end
+
+      d[ i ] = getCurrentTime( engine );
+
+      closeId( engine );
+      closeId( manager );
+      closeId( destr );
+      end
+
+   return d;
+   end
+
 -- Function for estimating time to fail of Hopfield network;
 function estimateTimeToFail( times, lambda )
    local t = 0.0;
    local tsqr = 0.0;
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HopfieldNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -119,9 +143,9 @@ function estimateTimeToFail( times, lambda )
 function estimateSurvivalFunction( times, lambda, t )
    local p = 0.0;
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HopfieldNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -151,11 +175,11 @@ function estimateSurvivalFunction( times, lambda, t )
 -- Function for estimating faults count destribution of Hopfield network;
 function estimateFaultsCountDestribution( times, lambda )
    local d = {};
-   for i = 0, N * ( N - 1 ) * 2 do d[ i ] = 0 end
+   for i = 0, net.neuronsCount * ( net.neuronsCount - 1 ) * 2 do d[ i ] = 0 end
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HopfieldNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -173,7 +197,7 @@ function estimateFaultsCountDestribution( times, lambda )
       closeId( destr );
       end
 
-   -- for i = 0, N * ( N - 1 ) * 2 do d[ i ] = d[ i ] / times end
+   -- for i = 0, net.neuronsCount * ( net.neuronsCount - 1 ) * 2 do d[ i ] = d[ i ] / times end
    return d;
    end
 
@@ -182,9 +206,9 @@ function estimateWeightImportance( times, lambda, resistorIndex, t )
    local p = 0.0;
    local m = 0; local s = -1;
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HopfieldNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -208,59 +232,12 @@ function estimateWeightImportance( times, lambda, resistorIndex, t )
    return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
--- Function for training Hopfield network;
-function trainNetwork( vectors )
-   for i = 0, N - 1 do
-      w = {};
-      for j = 0, N - 2 do
-         w[ j + 1 ] = 0.0;
-         if j >= i then
-            for k = 1, #vectors do
-               w[ j + 1 ] = w[ j + 1 ] + vectors[ k ][ i + 1 ] * vectors[ k ][ j + 2 ];
-               end
-         else
-            for k = 1, #vectors do
-               w[ j + 1 ] = w[ j + 1 ] + vectors[ k ][ i + 1 ] * vectors[ k ][ j + 1 ];
-               end
-            end
-
-         w[ j + 1 ] = w[ j + 1 ] / N;
-         end
-
-         setupAnalogResistors( resistors, 2 * ( N - 1 ) * i, N - 1, w, 2 );
-      end
-   end
-
 print( "API version: " .. apiVersion() );
-
--- Create analog components for Hopfield network;
-N = 16;
-io.write( "Creating analog components ... " ); io.flush();
-comparators = createAnalogComparators( N );
-resistors = createAnalogResistors( N * ( N - 1 ) * 2 );
-wires = createAnalogWires( 2 + N );
-print( "[OK]" );
 
 -- Create neurons layer;
 io.write( "Assembling Hopfield network ( 16 neurons ) ... " ); io.flush();
-neurons = {};
-for i = 0, N - 1 do
-   inputWires = {};
-   for j = 0, N - 2 do
-      if j >= i then inputWires[ j + 1 ] = j + 3;
-      else inputWires[ j + 1 ] = j + 2; end
-      end
-
-   neurons[ i + 1 ] = createAnalogNeuron(
-      N - 1,
-      inputWires,
-      0, 1,
-      comparators, i,
-      resistors, ( N - 1 ) * i * 2,
-      wires, 2 + i
-      );
-   end
-
+neurons = 16;
+net = analog.HopfieldNetwork.create( neurons );
 print( "[OK]" );
 
 -- Train Hopfield network;
@@ -270,7 +247,7 @@ trainVectors = {
    { -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1 }
    };
 
-trainNetwork( trainVectors );
+analog.HopfieldNetwork.train( net, trainVectors );
 print( "[OK]" );
 
 -- Simulate Hopfield network;
@@ -279,29 +256,23 @@ print( "[OK]" );
 
 length = 7; x = {};
 -- start = 0.00001; stop = 0.0001; delta = ( stop - start ) / ( length - 1 );
--- start = 0.0; stop = 20000.0; delta = ( stop - start ) / ( length - 1 );
-start = 9000.0; stop = 25000.0; delta = ( stop - start ) / ( length - 1 );
+start = 0.0; stop = 20000.0; delta = ( stop - start ) / ( length - 1 );
+-- start = 9000.0; stop = 25000.0; delta = ( stop - start ) / ( length - 1 );
 for i = 0, length - 1 do
    x[ i ] = start + i * delta;
    -- y, dyl, dyh = estimateTimeToFail( 121, x[ i ] );
-   -- y, dyl, dyh = estimateSurvivalFunction( 500, 0.0001, x[ i ] );
-   y, dyl, dyh = estimateWeightImportance( 1000, 0.0001, 0, x[ i ] );
+   y, dyl, dyh = estimateSurvivalFunction( 500, 0.0001, x[ i ] );
+   -- y, dyl, dyh = estimateWeightImportance( 1000, 0.0001, 0, x[ i ] );
    -- print( x[ i ] * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
-   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
    print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
    end;
 
--- destr = estimateFaultsCountDestribution( 1000, 0.0001 );
--- for i = 0, N * ( N - 1 ) * 2 do
-   -- print( i .. " " .. destr[ i ] );
-   -- end
+-- destr = estimateTimeToFailDestribution( 1000, 0.0001 );
+-- for i = 1, 1000 do
+--    print( i .. " " .. destr[ i ] );
+--    end
 
--- Close objects;
-for i = 1, N do
-   closeId( neurons[ i ] );
-   end
-
-closeId( comparators );
-closeId( resistors );
-closeId( wires );
+-- Close network;
+analog.HopfieldNetwork.destroy( net );
 

@@ -222,10 +222,20 @@ Kernel::Kernel()
    srand( time( NULL ) );
 
    // Create lua virtual machine context;
-   this->luaVM = luaL_newstate();
+   luaVM = luaL_newstate();
 
    // Initialize lua standard library functions;
-   luaL_openlibs( this->luaVM );
+   luaL_openlibs( luaVM );
+
+   // Set modules path;
+   #ifdef MODULES_PATH
+   lua_getglobal( luaVM, "package" );
+   lua_getfield( luaVM, -1, "path" );
+   lua_pushstring( luaVM, ";" MODULES_PATH "/?.lua" );
+   lua_concat( luaVM, 2 );
+   lua_setfield( luaVM, -2, "path" );
+   lua_pop( luaVM, 1 );
+   #endif
 
    // Register API functions;
    registerApiFunctions( this->luaVM );

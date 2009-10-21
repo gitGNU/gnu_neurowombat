@@ -15,12 +15,7 @@
 --   You should have received a copy of the GNU General Public License
 --   along with NeuroWombat.  If not, see <http://www.gnu.org/licenses/>.
 
-
--- Multilayer perceptron script ( 21 neurons ). The goal of training 
--- is to predict periodic function values.
-
-require "abstract.MultilayerPerceptron";
-perceptron = abstract.MultilayerPerceptron;
+require "abstract.GeneralizedRegressionNetwork";
 
 function visualizeResults( x1, x2, pointsCount )
    local value = x1;
@@ -33,16 +28,14 @@ function visualizeResults( x1, x2, pointsCount )
       x[ 3 ] = 5.0 * math.sin( value - 3.0 * math.pi / 16.0 );
       x[ 4 ] = 5.0 * math.sin( value - 2.0 * math.pi / 16.0 );
       x[ 5 ] = 5.0 * math.sin( value - 1.0 * math.pi / 16.0 );
-      setSignals( net.connectors, 1, x );
-      computeAbstractNeurons( net.neurons, 1 );
-      local y = getSignals( net.connectors, net.connectorsCount - 1, 1 );
+      local y = abstract.GeneralizedRegressionNetwork.compute( net, x );
       io.write( string.format( "%.3f <=> %.3f\n", 5.0 * math.sin( value ), y[ 1 ] ) );
 
       value = value + delta;
       end
    end
 
--- Function for testing multilayer perceptron;
+-- Function for testing probabilistic network;
 function testNetwork()
    local errLimit = 1.0;
    local deltaTest = -5.0 * math.pi / 16.0;
@@ -56,20 +49,18 @@ function testNetwork()
       target[ 1 ] = 5.0 * math.sin( deltaTest + 5.0 * math.pi / 16.0 );
       deltaTest = deltaTest + math.pi / 16.0;
 
-      setSignals( net.connectors, 1, x );
-      computeAbstractNeurons( net.neurons, 1 );
-      local y = getSignals( net.connectors, net.connectorsCount - 1, 1 );
+      local y = abstract.GeneralizedRegressionNetwork.compute( net, x );
       if math.abs( target[ 1 ] - y[ 1 ] ) > errLimit then return false end
       end
 
    return true;
-   end
+end
 
--- Function for estimating time to fail destribution of Hopfield network;
+-- Function for estimating time to fail destribution of probabilistic network;
 function estimateTimeToFailDestribution( times, lambda )
    local d = {};
    for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
+      abstract.GeneralizedRegressionNetwork.train( net, trainVectors, spread );
       local destr = createExponentialDestribution( lambda );
       local manager = createAbstractWeightsManager( destr, net.weights );
       local engine = createSimulationEngine();
@@ -89,12 +80,12 @@ function estimateTimeToFailDestribution( times, lambda )
    return d;
    end
 
--- Function for estimating time to fail of multilayer perceptron;
+-- Function for estimating time to fail of probabilistic network;
 function estimateTimeToFail( times, lambda )
    local t = 0.0;
    local tsqr = 0.0;
    for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
+      abstract.GeneralizedRegressionNetwork.train( net, trainVectors, spread );
       local destr = createExponentialDestribution( lambda );
       local manager = createAbstractWeightsManager( destr, net.weights );
       local engine = createSimulationEngine();
@@ -113,21 +104,19 @@ function estimateTimeToFail( times, lambda )
       closeId( engine );
       closeId( manager );
       closeId( destr );
-      io.write( i .. "" ); io.flush();
       end
 
-   print( "end" );
    t = t / times;
    tsqr = tsqr / times;
    local d = calcMeanCI( t, tsqr, times, 0.95 );
    return t, t - d, t + d;
    end
 
--- Function for estimating survival function of multilayer perceptron;
+-- Function for estimating survival function of probabilistic network;
 function estimateSurvivalFunction( times, lambda, t )
    local p = 0.0;
    for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
+      abstract.GeneralizedRegressionNetwork.train( net, trainVectors, spread );
       local destr = createExponentialDestribution( lambda );
       local manager = createAbstractWeightsManager( destr, net.weights );
       local engine = createSimulationEngine();
@@ -150,20 +139,18 @@ function estimateSurvivalFunction( times, lambda, t )
       closeId( engine );
       closeId( manager );
       closeId( destr );
-      io.write( i .. "" ); io.flush();
       end
 
-   print( "end" );
    p = p / times;
    return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
--- Function for estimating faults count destribution of multilayer perceptron;
+-- Function for estimating faults count destribution of probabilistic network;
 function estimateFaultsCountDestribution( times, lambda )
    local d = {};
-   for i = 0, net.weightsCount do d[ i ] = 0 end
+   for i = 0, weightsCount do d[ i ] = 0 end
    for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
+      abstract.GeneralizedRegressionNetwork.train( net, trainVectors, spread );
       local destr = createExponentialDestribution( lambda );
       local manager = createAbstractWeightsManager( destr, net.weights );
       local engine = createSimulationEngine();
@@ -183,16 +170,16 @@ function estimateFaultsCountDestribution( times, lambda )
       closeId( destr );
       end
 
-   -- for i = 0, net.weightsCount do d[ i ] = d[ i ] / times end
+   for i = 0, weightsCount do d[ i ] = d[ i ] / times end
    return d;
    end
 
--- Function for estimating weight importance of multilayer perceptron;
+-- Function for estimating weight importance of probabilistic network;
 function estimateWeightImportance( times, lambda, weightIndex, t )
    local p = 0.0;
    local m = 0; local s = -1;
    for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
+      abstract.GeneralizedRegressionNetwork.train( net, trainVectors, spread );
       local destr = createExponentialDestribution( lambda );
       local manager = createAbstractWeightsManager( destr, net.weights );
       local engine = createSimulationEngine();
@@ -205,7 +192,7 @@ function estimateWeightImportance( times, lambda, weightIndex, t )
          end
 
       if testNetwork() then
-         setAbstractWeights( weights, weightIndex, { 0.0 } );
+         setAbstractWeights( net.weights, weightIndex, { 0.0 } );
          if not testNetwork() then p = p + 1.0 end
          end
 
@@ -218,115 +205,109 @@ function estimateWeightImportance( times, lambda, weightIndex, t )
    return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
--- Function for training multilayer perceptron;
-function trainNetwork( err, damping, speed, epochsLimit )
-   local w = {}
-   for i = 1, net.weightsCount do
-      w[ i ] = 1.0 - 2.0 * math.random();
-      end
-
-   setAbstractWeights( net.weights, 0, w );
-
-   local x = {};
-   local target = {};
-   local delta = -5.0 * math.pi / 16.0;
-   local i = 0;
-   local epochs = 0;
-   while epochs < epochsLimit do
-      x[ 1 ] = 5.0 * math.sin( delta );
-      x[ 2 ] = 5.0 * math.sin( delta + math.pi / 16.0 );
-      x[ 3 ] = 5.0 * math.sin( delta + 2.0 * math.pi / 16.0 );
-      x[ 4 ] = 5.0 * math.sin( delta + 3.0 * math.pi / 16.0 );
-      x[ 5 ] = 5.0 * math.sin( delta + 4.0 * math.pi / 16.0 );
-      target[ 1 ] = 5.0 * math.sin( delta + 5.0 * math.pi / 16.0 );
-      delta = delta + math.pi / 16.0;
-
-      setSignals( net.connectors, 1, x );
-      trainBPAbstractNeurons( net.neurons, layers, target, damping, speed );
-      computeAbstractNeurons( net.neurons, 1 );
-      local y = getSignals( net.connectors, net.connectorsCount - 1, 1 );
-
-      if math.abs( target[ 1 ] - y[ 1 ] ) <= err then
-         -- Complete test;
-         local maxE = 0.0;
-         local deltaTest = -5.0 * math.pi / 16.0;
-         for j = 1, 32 do
-            x[ 1 ] = 5.0 * math.sin( deltaTest );
-            x[ 2 ] = 5.0 * math.sin( deltaTest + math.pi / 16.0 );
-            x[ 3 ] = 5.0 * math.sin( deltaTest + 2.0 * math.pi / 16.0 );
-            x[ 4 ] = 5.0 * math.sin( deltaTest + 3.0 * math.pi / 16.0 );
-            x[ 5 ] = 5.0 * math.sin( deltaTest + 4.0 * math.pi / 16.0 );
-            target[ 1 ] = 5.0 * math.sin( deltaTest + 5.0 * math.pi / 16.0 );
-            deltaTest = deltaTest + math.pi / 16.0;
-
-            setSignals( net.connectors, 1, x );
-            computeAbstractNeurons( net.neurons, 1 );
-            y = getSignals( net.connectors, net.connectorsCount - 1, 1 );
-            if math.abs( maxE ) < math.abs( target[ 1 ] - y[ 1 ] ) then
-               maxE = target[ 1 ] - y[ 1 ];
-               end
-            end
-
-         if math.abs( maxE ) <= err then break; end
-         end
-
-      if i < 32 then
-         i = i + 1;
-      else
-         i = 0;
-         delta = -5.0 * math.pi / 16.0;
-         end
-
-      epochs = epochs + 1;
-      end
-
-   return epochs;
-   end
-
 print( "API version: " .. apiVersion() );
 
--- Create activation functions;
-linActFunc = createLinearActFunc( 1.0, 0.0 );
-sigActFunc = createSigmoidActFunc();
-
--- Set neurons count in each layer;
 inputs = 5;
-layers = { 15, 1 };
+spread = 0.7;
+trainVectors = {};
+--   { { 4 }, { 1.5 } },
+--   { { 5 }, { 3.6 } },
+--   { { 6 }, { 6.7 } }
+--   { { 1 }, { 0 } },
+--   { { 2 }, { 1 } },
+--   { { 3 }, { 2 } },
+--   { { 4 }, { 3 } },
+--   { { 5 }, { 2 } },
+--   { { 6 }, { 1 } },
+--   { { 7 }, { 2 } },
+--   { { 8 }, { 1 } }
+--   };
 
--- Create neuron layers;
-io.write( "Assembling multilayer perceptron ... " ); io.flush();
-net = perceptron.create( inputs, layers, { sigActFunc, linActFunc } );
+deltaTest = -5.0 * math.pi / 16.0;
+for i = 1, 32 do
+   trainVectors[ i ] = { {}, {} };
+   trainVectors[ i ][ 1 ][ 1 ] = 5.0 * math.sin( deltaTest );
+   trainVectors[ i ][ 1 ][ 2 ] = 5.0 * math.sin( deltaTest + math.pi / 16.0 );
+   trainVectors[ i ][ 1 ][ 3 ] = 5.0 * math.sin( deltaTest + 2.0 * math.pi / 16.0 );
+   trainVectors[ i ][ 1 ][ 4 ] = 5.0 * math.sin( deltaTest + 3.0 * math.pi / 16.0 );
+   trainVectors[ i ][ 1 ][ 5 ] = 5.0 * math.sin( deltaTest + 4.0 * math.pi / 16.0 );
+   trainVectors[ i ][ 2 ][ 1 ] = 5.0 * math.sin( deltaTest + 5.0 * math.pi / 16.0 );
+   deltaTest = deltaTest + math.pi / 16.0;
+   end
+
+-- Create neurons layer;
+io.write( "Assembling generalized regression network ( 7 neurons ) ... " ); io.flush();
+net = abstract.GeneralizedRegressionNetwork.create( inputs, #trainVectors, 1 );
 print( "[OK]" );
 
--- Train multilayer perceptron;
+-- Train probabilistic network;
 io.write( "Training ... " ); io.flush();
-epochs = trainNetwork( 0.5, 0.5, 0.01, 10000 );
-print( epochs .. " [OK]" );
+abstract.GeneralizedRegressionNetwork.train( net, trainVectors, spread );
+print( "[OK]" );
+
+-- Print weights;
+print( "Radial-basis layer:" );
+for i = 1, #net.neurons[ 1 ] do
+   w = getAbstractWeights( net.weights, ( inputs + 1 ) * ( i - 1 ), inputs + 1 );
+   for j = 1, inputs + 1 do
+      print( "w[ " .. i .. " ][ " .. j .. " ] = " .. w[ j ] );
+      end
+   end
+
+print( "Linear layer:" );
+for i = 1, #net.neurons[ 2 ] do
+   w = getAbstractWeights( net.weights, ( inputs + 1 ) * #net.neurons[ 1 ] + #net.neurons[ 1 ] * ( i - 1 ), #net.neurons[ 1 ] );
+   for j = 1, #net.neurons[ 1 ] do
+      print( "w[ " .. i .. " ][ " .. j .. " ] = " .. w[ j ] );
+      end
+   end
+
+-- Test results;
+-- vectors = {
+--   { 4.5 },
+--   { 4.6 }
+--   { 1 },
+--   { 4 },
+--   { 6 },
+--   { 7 },
+--   { 8 },
+--   { 10 }
+--   };
+
+--for i = 1, #vectors do
+--   setSignals( connectors, 0, vectors[ i ] );
+--   computeAbstractNeurons( neurons[ 1 ], 1 );
+--   computeAbstractNeurons( neurons[ 2 ], 1 );
+--   x = getSignals( connectors, inputs + layers[ 1 ], layers[ 2 ] );
+--   print( "{ " .. vectors[ i ][ 1 ] .. " } => " .. x[ 1 ] );
+--   end
 
 visualizeResults( 0, 2 * math.pi, 10 );
 
-length = 7; x = {};
+-- Simulate Hopfield network;
+io.write( "Simulating ... " ); io.flush();
+print( "[OK]" );
+
+length = 10; x = {};
 -- start = 0.00001; stop = 0.0001; delta = ( stop - start ) / ( length - 1 );
-start = 0.0; stop = 1000.0; delta = ( stop - start ) / ( length - 1 );
 -- start = 0.0; stop = 1000.0; delta = ( stop - start ) / ( length - 1 );
+start = 0.0; stop = 1000.0; delta = ( stop - start ) / ( length - 1 );
 for i = 0, length - 1 do
    x[ i ] = start + i * delta;
-   -- y, dyl, dyh = estimateTimeToFail( 121, x[ i ] );
-   y, dyl, dyh = estimateSurvivalFunction( 121, 0.0001, x[ i ] );
-   -- y, dyl, dyh = estimateWeightImportance( 121, 0.0001, 1, x[ i ] );
-   -- y1, dyl1, dyh1 = estimateWeightImportance( 121, 0.0001, 91, x[ i ] );
+   -- y, dyl, dyh = estimateTimeToFail( 1000, x[ i ] );
+   -- y, dyl, dyh = estimateSurvivalFunction( 2000, 0.0001, x[ i ] );
+   y, dyl, dyh = estimateWeightImportance( 2000, 0.0001, 0, x[ i ] );
+   y1, dyl1, dyh1 = estimateWeightImportance( 2000, 0.0001, 222, x[ i ] );
    -- print( x[ i ] * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
-   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
-   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh .. " " .. dyl1 .. " " .. y1 .. " " .. dyh1 );
+   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh .. " " .. dyl1 .. " " .. y1 .. " " .. dyh1 );
    end;
 
--- destr = estimateTimeToFailDestribution( 1000, 0.0001 );
--- for i = 1, 1000 do
---    print( destr[ i ] .. ", " );
---    end
+-- destr = estimateFaultsCountDestribution( 1000, 0.0001 );
+-- for i = 0, weightsCount do
+   -- print( i .. " " .. destr[ i ] );
+   -- end
 
--- Close objects;
-perceptron.destroy( net );
-closeId( sigActFunc );
-closeId( linActFunc );
+-- Close network;
+abstract.GeneralizedRegressionNetwork.destroy( net );
 

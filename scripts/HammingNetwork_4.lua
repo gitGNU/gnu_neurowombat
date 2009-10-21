@@ -31,6 +31,8 @@
 -- #..#     ###.
 -- Otherwise it is considered to be in a fault state.
 
+require "analog.HammingNetwork";
+
 -- Function for testing Hamming network;
 function testNetwork()
    local x = {};
@@ -41,7 +43,7 @@ function testNetwork()
    for i = 1, 100 do
       local bottomPatternCounter = 0;
       local topPatternCounter = 0;
-      for j = 1, inputsCount do
+      for j = 1, inputs do
          if ( ( i <= 50 and j <= 8 ) or ( i > 50 and j > 8 ) ) then
             if math.random ( 4 ) == 1 then x[ j ] = 1.0;
             else x[ j ] = -1.0; end
@@ -54,10 +56,7 @@ function testNetwork()
          if ( j > 8 and x[ j ] == 1.0 ) then bottomPatternCounter = bottomPatternCounter + 1; end
          end
 
-      setPotentials( wires, 2, x );
-      computeAnalogNeurons( neuronsHm, 1 );
-      computeAnalogNeurons( neuronsHp, 4 );
-      local y = getPotentials( wires, 2 + inputsCount, layer );
+      local y = analog.HammingNetwork.compute( net, x, 4 );
 
       -- Analize result;
       if topPatternCounter == bottomPatternCounter then totalCount = totalCount - 1; end
@@ -70,14 +69,38 @@ function testNetwork()
    return ( hitsCount / totalCount >= 0.90 );
    end
 
+-- Function for estimating time to fail destribution of Hopfield network;
+function estimateTimeToFailDestribution( times, lambda )
+   local d = {};
+   for i = 1, times do
+      analog.HammingNetwork.train( net, trainVectors );
+      local destr = createExponentialDestribution( lambda );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
+      local engine = createSimulationEngine();
+      appendInterruptManager( engine, manager );
+
+      while stepOverEngine( engine ) do
+         if not testNetwork() then break end
+         end
+
+      d[ i ] = getCurrentTime( engine );
+
+      closeId( engine );
+      closeId( manager );
+      closeId( destr );
+      end
+
+   return d;
+   end
+
 -- Function for estimating time to fail of Hamming network;
 function estimateTimeToFail( times, lambda )
    local t = 0.0;
    local tsqr = 0.0;
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HammingNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -106,9 +129,9 @@ function estimateTimeToFail( times, lambda )
 function estimateSurvivalFunction( times, lambda, t )
    local p = 0.0;
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HammingNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -140,9 +163,9 @@ function estimateFaultsCountDestribution( times, lambda )
    local d = {};
    for i = 0, resistorsCount do d[ i ] = 0 end
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HammingNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -169,9 +192,9 @@ function estimateWeightImportance( times, lambda, resistorIndex, t )
    local p = 0.0;
    local m = 0; local s = -1;
    for i = 1, times do
-      trainNetwork( trainVectors );
+      analog.HammingNetwork.train( net, trainVectors );
       local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, resistors );
+      local manager = createAnalogResistorsManager( destr, net.resistors );
       local engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
 
@@ -182,7 +205,7 @@ function estimateWeightImportance( times, lambda, resistorIndex, t )
          end
 
       if testNetwork() then
-         setAnalogResistances( resistors, resistorIndex, { 0.0 } );
+         setAnalogResistances( net.resistors, resistorIndex, { 0.0 } );
          if not testNetwork() then p = p + 1.0 end
          end
 
@@ -195,82 +218,13 @@ function estimateWeightImportance( times, lambda, resistorIndex, t )
    return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
--- Function for training Hamming network;
-function trainNetwork( vectors )
-   w = {};
-   for i = 0, layer - 1 do
-      for j = 1, inputsCount do
-         w[ j ] = 0.5 * vectors[ i + 1 ][ j ];
-         end
-
-      setupAnalogResistors( resistors, inputsCount * i, inputsCount, w, 1 );
-      end
-
-   w = {};
-   for i = 0, layer - 1 do
-      for j = 0, layer - 1 do
-         if i ~= j then w[ j + 1 ] = -1.0 / layer;
-         else w[ j + 1 ] = 1.0; end
-         end
-
-      setupAnalogResistors( resistors, inputsCount * layer + 2 * layer * i, layer, w, 2 );
-      end
-   end
-
 print( "API version: " .. apiVersion() );
-
--- Set inputs count in each neuron of the first layer;
-inputsCount = 16;
-
--- Set neurons count in Hamming and Hopfield layers;
-layer = 2;
-
--- Calculate total comparators, resistors and wires count;
-comparatorsCount = layer;
-resistorsCount = inputsCount * layer + 2 * layer * layer;
-wiresCount = 2 + inputsCount + layer;
-
--- Create analog components for Hamming network;
-io.write( "Creating analog components ... " ); io.flush();
-comparators = createAnalogComparators( comparatorsCount );
-resistors = createAnalogResistors( resistorsCount );
-wires = createAnalogWires( wiresCount );
-print( "[OK]" );
 
 -- Create Hamming and Hopfield layers;
 io.write( "Assembling Hamming network ( 4 neurons ) ... " ); io.flush();
-neuronsHm = {};
-neuronsHp = {};
-hmInputWires = {};
-for j = 0, inputsCount - 1 do
-   hmInputWires[ j + 1 ] = 2 + j;
-   end
-
-hpInputWires = {};
-for j = 0, layer - 1 do
-   hpInputWires[ j + 1 ] = 2 + inputsCount + j;
-   end
-
-for i = 0, layer - 1 do
-   neuronsHm[ i + 1 ] = createAnalogNeuron(
-      inputsCount,
-      hmInputWires,
-      0, 1,
-      0, 0,
-      resistors, inputsCount * i,
-      wires, 2 + inputsCount + i
-      );
-
-   neuronsHp[ i + 1 ] = createAnalogNeuron(
-      layer,
-      hpInputWires,
-      0, 1,
-      comparators, i,
-      resistors, inputsCount * layer + layer * i * 2,
-      wires, 2 + inputsCount + i
-      );
-   end
-
+inputs = 16;
+layer = 2;
+net = analog.HammingNetwork.create( inputs, layer );
 print( "[OK]" );
 
 -- Train Hamming network;
@@ -280,7 +234,7 @@ trainVectors = {
    { -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1 }
    };
 
-trainNetwork( trainVectors );
+analog.HammingNetwork.train( net, trainVectors );
 print( "[OK]" );
 
 -- Simulate Hopfield network;
@@ -289,31 +243,24 @@ print( "[OK]" );
 
 length = 10; x = {};
 -- start = 0.00001; stop = 0.0001; delta = ( stop - start ) / ( length - 1 );
--- start = 0.0; stop = 5000.0; delta = ( stop - start ) / ( length - 1 );
-start = 0.0; stop = 23000.0; delta = ( stop - start ) / ( length - 1 );
+start = 0.0; stop = 5000.0; delta = ( stop - start ) / ( length - 1 );
+-- start = 0.0; stop = 23000.0; delta = ( stop - start ) / ( length - 1 );
 for i = 0, length - 1 do
    x[ i ] = start + i * delta;
    -- y, dyl, dyh = estimateTimeToFail( 250, x[ i ] );
-   -- y, dyl, dyh = estimateSurvivalFunction( 2000, 0.0001, x[ i ] );
-   y, dyl, dyh = estimateWeightImportance( 2000, 0.0001, 0, x[ i ] );
-   y1, dyl1, dyh1 = estimateWeightImportance( 2000, 0.0001, 32, x[ i ] );
+   y, dyl, dyh = estimateSurvivalFunction( 2000, 0.0001, x[ i ] );
+   -- y, dyl, dyh = estimateWeightImportance( 2000, 0.0001, 0, x[ i ] );
+   -- y1, dyl1, dyh1 = estimateWeightImportance( 2000, 0.0001, 32, x[ i ] );
    -- print( x[ i ] * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
-   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
-   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh .. " " .. dyl1 .. " " .. y1 .. " " .. dyh1 );
+   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh .. " " .. dyl1 .. " " .. y1 .. " " .. dyh1 );
    end;
 
--- destr = estimateFaultsCountDestribution( 1000, 0.0001 );
--- for i = 0, resistorsCount do
-   -- print( i .. " " .. destr[ i ] );
-   -- end
+-- destr = estimateTimeToFailDestribution( 1000, 0.0001 );
+-- for i = 1, 1000 do
+--    print( destr[ i ] .. ", " );
+--    end
 
--- Close objects;
-for i = 1, layer do
-   closeId( neuronsHm[ i ] );
-   closeId( neuronsHp[ i ] );
-   end
-
-closeId( comparators );
-closeId( resistors );
-closeId( wires );
+-- Close network;
+analog.HammingNetwork.destroy( net );
 
