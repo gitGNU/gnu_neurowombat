@@ -35,7 +35,7 @@ class InterruptManager : public KernelObject
    {
    public:
       InterruptManager(
-         int numIntSources,
+         unsigned int intSourcesCount,
          bool unlimitRegeneration,
          Destribution * destribution
          );
@@ -45,13 +45,21 @@ class InterruptManager : public KernelObject
       double getInterrupt();
       int getLastIntSource();
       int getIntSource();
-      unsigned int getInterruptsCount();
+      unsigned int getIntSourcesCount() const;
+      unsigned int getInterruptsCount() const;
+
+      virtual void simulateInterrupt( unsigned int intSource ) = 0;
 
       // Base method should be called at the end of reimplementation;
       virtual void handleInterrupt() = 0;
 
+      // Base method should be called in reimplementation;
+      virtual void reinit() = 0;
+
    protected:
       InterruptManager();
+
+      unsigned int intSourcesCount;
 
    private:
       // Most time-consuming operation;
@@ -59,7 +67,6 @@ class InterruptManager : public KernelObject
 
       unsigned int interruptsCount;
 
-      int numIntSources;
       double * interrupts;
 
       int intSource;

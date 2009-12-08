@@ -26,6 +26,7 @@
 
 
 #include "api/api.h"
+#include "api/constants.h"
 
 
 /***************************************************************************
@@ -206,6 +207,12 @@ KernelObjectId Kernel::getId( KernelObject * object )
    };
 
 
+lua_State * Kernel::getVM() const
+   {
+   return luaVM;
+   };
+
+
 void Kernel::doFile( const char * fileName )
    {
    if ( this->luaVM != NULL )
@@ -238,7 +245,10 @@ Kernel::Kernel()
    #endif
 
    // Register API functions;
-   registerApiFunctions( this->luaVM );
+   registerApiFunctions( luaVM );
+
+   // Register API constants;
+   registerApiConstants( luaVM );
    };
 
 

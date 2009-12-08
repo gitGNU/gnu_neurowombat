@@ -24,6 +24,7 @@
 
 #include "kernel/KernelObject.h"
 #include "engine/InterruptManager.h"
+#include "objects/CustomFunction.h"
 
 
 /***************************************************************************
@@ -59,15 +60,20 @@ class AnalogResistorsManager : public InterruptManager
       AnalogResistorsManager();
       AnalogResistorsManager(
          Destribution * destribution,
-         AnalogResistors * analogResistors
+         AnalogResistors * analogResistors,
+         CustomFunction * fixFunction
          );
 
       virtual ~AnalogResistorsManager();
 
+      virtual void simulateInterrupt( unsigned int intSource );
       virtual void handleInterrupt();
+      virtual void reinit();
 
    private:
       AnalogResistors * analogResistors;
+      CustomFunction * fixFunction;
+      double * resistancesBackup;
    };
 
 

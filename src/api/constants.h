@@ -18,50 +18,35 @@
  ***************************************************************************/
 
 
-#ifndef SIMULATIONENGINE_H
-#define SIMULATIONENGINE_H
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 
-#include <vector>
+#include <lua.hpp>
 
 
-#include "kernel/KernelObject.h"
-#include "engine/InterruptManager.h"
+void registerApiConstants( lua_State * L );
 
 
 /***************************************************************************
- *   SimulationEngine class declaration                                    *
+ *   Commonn API functions declaration                                     *
  ***************************************************************************/
 
 
-class SimulationEngine : public KernelObject
-   {
-   public:
-      SimulationEngine();
-      virtual ~SimulationEngine();
+extern "C" int newIndexHandler( lua_State * L );
 
-      void appendManager( InterruptManager * manager );
-      void insertManagerBefore( unsigned int index, InterruptManager * manager );
-      void deleteManager( unsigned int index );
-      void clear();
-      void restart();
 
-      bool stepOver();
+/***************************************************************************
+ *   Registration functions declaration                                    *
+ ***************************************************************************/
 
-      double getCurrentTime();
-      double getFutureTime();
-      InterruptManager * getCurrentIntSource();
-      InterruptManager * getFutureIntSource();
+inline void registerActivationFunctions( lua_State * L );
 
-   private:
-      // Most time-consuming operation;
-      InterruptManager * findOutIntSource();
 
-      std::vector< InterruptManager * > managers;
-      double currentTime;
-      InterruptManager * currentIntSource;
-      InterruptManager * futureIntSource;
-   };
+inline void registerAbstractProcessors( lua_State * L );
+
+
+inline void registerCoefficientUsage( lua_State * L );
 
 
 #endif

@@ -160,6 +160,43 @@ double AbstractNeuron::getOutput()
    };
 
 
+double AbstractNeuron::leftCompute()
+   {
+   // Calculate processor out;
+   processorOut = processor->process(
+      inputsCount, inputConnectors, connectors,
+      builtInWeights, weights, weightsBaseIndex
+      );
+
+   return processorOut;
+   };
+
+
+void AbstractNeuron::rightCompute( double processorOut )
+   {
+   this->processorOut = processorOut;
+
+   // Activation signal through the activator to neuron's output connector;
+   if ( activators == NULL )
+      {
+      // Use built-in activation function;
+      connectors->setSignal(
+         connectorsBaseIndex,
+         activationFunction->evaluateFunction( processorOut )
+         );
+      }
+   else
+      {
+      // Use external activator;
+      activators->setSignal( activatorsBaseIndex, processorOut );
+      connectors->setSignal(
+         connectorsBaseIndex,
+         activators->getSignal( activatorsBaseIndex )
+         );
+      }
+   };
+
+
 void AbstractNeuron::compute()
    {
    // Calculate processor out;

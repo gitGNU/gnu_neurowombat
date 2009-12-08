@@ -79,6 +79,7 @@ class Kernel : public Singleton < Kernel >
       KernelObject * getObject( KernelObjectId id );
       KernelObjectId getId( KernelObject * object );
 
+      lua_State * getVM() const;
       void doFile( const char * fileName );
 
    protected:

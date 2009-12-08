@@ -75,7 +75,8 @@ AnalogResistorsManager::AnalogResistorsManager()
 
 AnalogResistorsManager::AnalogResistorsManager(
    Destribution * destribution,
-   AnalogResistors * analogResistors
+   AnalogResistors * analogResistors,
+   CustomFunction * fixFunction
    )
    : InterruptManager(
       ( analogResistors != NULL ) ? analogResistors->count() : 0,
@@ -87,6 +88,31 @@ AnalogResistorsManager::AnalogResistorsManager(
 
    // Capture object;
    if ( analogResistors != NULL ) analogResistors->capture();
+
+   this->fixFunction = fixFunction;
+
+   if ( fixFunction != NULL )
+      {
+      fixFunction->capture();
+      resistancesBackup = NULL;
+      }
+   else
+      {
+      // Create backup for resistances;
+      unsigned int resistancesBackupLength = analogResistors->count();
+      if ( resistancesBackupLength > 0 )
+         {
+         resistancesBackup = new double[ resistancesBackupLength ];
+         for ( unsigned int i = 0; i < resistancesBackupLength; i ++ )
+            {
+            resistancesBackup[ i ] = analogResistors->getResistance( i );
+            }
+         }
+      else
+         {
+         resistancesBackup = NULL;
+         }
+      }
    };
 
 
@@ -94,18 +120,50 @@ AnalogResistorsManager::~AnalogResistorsManager()
    {
    // Release captured object;
    if ( analogResistors != NULL ) analogResistors->release();
+   if ( fixFunction != NULL ) fixFunction->release();
+
+   if ( resistancesBackup != NULL ) delete[] resistancesBackup;
+   };
+
+
+void AnalogResistorsManager::simulateInterrupt( unsigned int intSource )
+   {
+   if ( intSource < intSourcesCount && analogResistors != NULL )
+      {
+      analogResistors->setResistance( intSource, 0.0 );
+      }
    };
 
 
 void AnalogResistorsManager::handleInterrupt()
    {
    // Break up wire;
-   int resistorIndex = this->getIntSource();
-   if ( resistorIndex >= 0 && this->analogResistors != NULL )
+   int resistorIndex = getIntSource();
+   if ( resistorIndex >= 0 && analogResistors != NULL )
       {
-      this->analogResistors->setResistance( resistorIndex, 0.0 );
+      analogResistors->setResistance( resistorIndex, 0.0 );
       }
 
    // Pass control to base implementation;
    InterruptManager::handleInterrupt();
+   };
+
+
+void AnalogResistorsManager::reinit()
+   {
+   // Call base implementation;
+   InterruptManager::reinit();
+
+   if ( fixFunction != NULL )
+      {
+      fixFunction->call();
+      }
+   else
+      {
+      // Restore resistances from backup;
+      for ( unsigned int i = 0; i < analogResistors->count(); i ++ )
+         {
+         analogResistors->setResistance( i, resistancesBackup[ i ] );
+         }
+      }
    };

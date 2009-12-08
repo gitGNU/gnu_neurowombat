@@ -18,50 +18,78 @@
  ***************************************************************************/
 
 
-#ifndef SIMULATIONENGINE_H
-#define SIMULATIONENGINE_H
+#include "objects/CustomFunction.h"
 
 
-#include <vector>
+#include "kernel/Kernel.h"
 
 
-#include "kernel/KernelObject.h"
-#include "engine/InterruptManager.h"
+// It is better for API functions to use this pointer instead of
+// Kernel::instance() and Kernel::freeInstance() methods;
+extern Kernel * kernel;
 
 
 /***************************************************************************
- *   SimulationEngine class declaration                                    *
+ *   CustomFunction abstract class implementation                          *
  ***************************************************************************/
 
 
-class SimulationEngine : public KernelObject
+CustomFunction::CustomFunction( int index )
+   : KernelObject()
    {
-   public:
-      SimulationEngine();
-      virtual ~SimulationEngine();
-
-      void appendManager( InterruptManager * manager );
-      void insertManagerBefore( unsigned int index, InterruptManager * manager );
-      void deleteManager( unsigned int index );
-      void clear();
-      void restart();
-
-      bool stepOver();
-
-      double getCurrentTime();
-      double getFutureTime();
-      InterruptManager * getCurrentIntSource();
-      InterruptManager * getFutureIntSource();
-
-   private:
-      // Most time-consuming operation;
-      InterruptManager * findOutIntSource();
-
-      std::vector< InterruptManager * > managers;
-      double currentTime;
-      InterruptManager * currentIntSource;
-      InterruptManager * futureIntSource;
+   lua_State * L = kernel->getVM();
+   lua_pushvalue( L, index );
+   functionReference = luaL_ref( L, LUA_REGISTRYINDEX );
    };
 
 
-#endif
+CustomFunction::~CustomFunction()
+   {
+   luaL_unref( kernel->getVM(), LUA_REGISTRYINDEX, functionReference );
+   };
+
+
+void CustomFunction::call() const
+   {
+   lua_State * L = kernel->getVM();
+   lua_rawgeti( L, LUA_REGISTRYINDEX, functionReference );
+   lua_pcall( L, 0, 0, 0 );
+   };
+
+
+double CustomFunction::call( double x ) const
+   {
+   lua_State * L = kernel->getVM();
+   lua_rawgeti( L, LUA_REGISTRYINDEX, functionReference );
+   lua_pushnumber( L, x );
+   lua_pcall( L, 1, 1, 0 );
+   double result = lua_tonumber( L, -1 );
+   lua_pop( L, 1 );
+   return result;
+   };
+
+
+int CustomFunction::getFunctionReference() const
+   {
+   return functionReference;
+   };
+
+
+CustomFunction::CustomFunction()
+   : KernelObject()
+   {
+   // Do nothing;
+   };
+
+
+CustomFunction::CustomFunction( const CustomFunction & other )
+   {
+   // Do nothing;
+   };
+
+
+CustomFunction & CustomFunction::operator =( const CustomFunction & other )
+   {
+   // Do nothing;
+   return * this;
+   };

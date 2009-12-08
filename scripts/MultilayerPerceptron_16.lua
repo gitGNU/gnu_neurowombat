@@ -20,7 +20,7 @@
 -- is to predict periodic function values.
 
 require "abstract.MultilayerPerceptron";
-perceptron = abstract.MultilayerPerceptron;
+require "reliability";
 
 function visualizeResults( x1, x2, pointsCount )
    local value = x1;
@@ -63,159 +63,6 @@ function testNetwork()
       end
 
    return true;
-   end
-
--- Function for estimating time to fail destribution of Hopfield network;
-function estimateTimeToFailDestribution( times, lambda )
-   local d = {};
-   for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAbstractWeightsManager( destr, net.weights );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      while stepOverEngine( engine ) do
-         if not testNetwork() then break end
-         end
-
-      d[ i ] = getCurrentTime( engine );
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      end
-
-   return d;
-   end
-
--- Function for estimating time to fail of multilayer perceptron;
-function estimateTimeToFail( times, lambda )
-   local t = 0.0;
-   local tsqr = 0.0;
-   for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAbstractWeightsManager( destr, net.weights );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      repeat
-         if not testNetwork() then
-            local x = getCurrentTime( engine );
-            t = t + x;
-            tsqr = tsqr + x * x;
-            break;
-            end
-
-         until not stepOverEngine( engine )
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      io.write( i .. "" ); io.flush();
-      end
-
-   print( "end" );
-   t = t / times;
-   tsqr = tsqr / times;
-   local d = calcMeanCI( t, tsqr, times, 0.95 );
-   return t, t - d, t + d;
-   end
-
--- Function for estimating survival function of multilayer perceptron;
-function estimateSurvivalFunction( times, lambda, t )
-   local p = 0.0;
-   for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAbstractWeightsManager( destr, net.weights );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      local tIsTooLarge = true;
-      repeat
-         if getCurrentTime( engine ) >= t then
-            if testNetwork() then p = p + 1.0 end
-            tIsTooLarge = false;
-            break;
-            end
-
-         until not stepOverEngine( engine )
-
-      if tIsTooLarge then
-         if testNetwork() then p = p + 1.0 end
-         end;
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      io.write( i .. "" ); io.flush();
-      end
-
-   print( "end" );
-   p = p / times;
-   return p, calcACProbabilityCI( p, times, 0.05 );
-   end
-
--- Function for estimating faults count destribution of multilayer perceptron;
-function estimateFaultsCountDestribution( times, lambda )
-   local d = {};
-   for i = 0, net.weightsCount do d[ i ] = 0 end
-   for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAbstractWeightsManager( destr, net.weights );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      failesCount = 0;
-      while stepOverEngine( engine ) do
-         failesCount = failesCount + 1;
-         if not testNetwork() then break end
-
-         end
-
-      d[ failesCount ] = d[ failesCount ] + 1;
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      end
-
-   -- for i = 0, net.weightsCount do d[ i ] = d[ i ] / times end
-   return d;
-   end
-
--- Function for estimating weight importance of multilayer perceptron;
-function estimateWeightImportance( times, lambda, weightIndex, t )
-   local p = 0.0;
-   local m = 0; local s = -1;
-   for i = 1, times do
-      trainNetwork( 0.5, 0.5, 0.01, 10000 );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAbstractWeightsManager( destr, net.weights );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      if t >= getFutureTime( engine ) then
-         while stepOverEngine( engine ) do
-            if t < getFutureTime( engine ) then break end
-            end         
-         end
-
-      if testNetwork() then
-         setAbstractWeights( weights, weightIndex, { 0.0 } );
-         if not testNetwork() then p = p + 1.0 end
-         end
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      end
-
-   p = p / times;
-   return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
 -- Function for training multilayer perceptron;
@@ -262,12 +109,12 @@ function trainNetwork( err, damping, speed, epochsLimit )
             setSignals( net.connectors, 1, x );
             computeAbstractNeurons( net.neurons, 1 );
             y = getSignals( net.connectors, net.connectorsCount - 1, 1 );
-            if math.abs( maxE ) < math.abs( target[ 1 ] - y[ 1 ] ) then
-               maxE = target[ 1 ] - y[ 1 ];
+            if maxE < math.abs( target[ 1 ] - y[ 1 ] ) then
+               maxE = math.abs( target[ 1 ] - y[ 1 ] );
                end
             end
 
-         if math.abs( maxE ) <= err then break; end
+         if maxE <= err then break; end
          end
 
       if i < 32 then
@@ -283,19 +130,24 @@ function trainNetwork( err, damping, speed, epochsLimit )
    return epochs;
    end
 
+
+function retrainNetwork()
+   trainNetwork( 0.5, 0.5, 0.01, 10000 );
+   end
+
 print( "API version: " .. apiVersion() );
 
 -- Create activation functions;
-linActFunc = createLinearActFunc( 1.0, 0.0 );
-sigActFunc = createSigmoidActFunc();
+linActFunc = createActFunc( ACT_FUNC.LINEAR, 1.0, 0.0 );
+sigActFunc = createActFunc( ACT_FUNC.SIGMOID, 1.0 );
 
 -- Set neurons count in each layer;
 inputs = 5;
 layers = { 15, 1 };
 
 -- Create neuron layers;
-io.write( "Assembling multilayer perceptron ... " ); io.flush();
-net = perceptron.create( inputs, layers, { sigActFunc, linActFunc } );
+io.write( "Assembling multilayer perceptron ( 16 neurons ) ... " ); io.flush();
+net = abstract.MultilayerPerceptron.create( inputs, layers, { sigActFunc, linActFunc } );
 print( "[OK]" );
 
 -- Train multilayer perceptron;
@@ -305,28 +157,71 @@ print( epochs .. " [OK]" );
 
 visualizeResults( 0, 2 * math.pi, 10 );
 
-length = 7; x = {};
--- start = 0.00001; stop = 0.0001; delta = ( stop - start ) / ( length - 1 );
-start = 0.0; stop = 1000.0; delta = ( stop - start ) / ( length - 1 );
--- start = 0.0; stop = 1000.0; delta = ( stop - start ) / ( length - 1 );
-for i = 0, length - 1 do
-   x[ i ] = start + i * delta;
-   -- y, dyl, dyh = estimateTimeToFail( 121, x[ i ] );
-   y, dyl, dyh = estimateSurvivalFunction( 121, 0.0001, x[ i ] );
-   -- y, dyl, dyh = estimateWeightImportance( 121, 0.0001, 1, x[ i ] );
-   -- y1, dyl1, dyh1 = estimateWeightImportance( 121, 0.0001, 91, x[ i ] );
-   -- print( x[ i ] * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
-   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
-   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh .. " " .. dyl1 .. " " .. y1 .. " " .. dyh1 );
-   end;
+-- Simulate multilayer perceptron network;
+print( "Choose the option to do:\n1) Estimate time to fail\n2) Estimate survival function\n3) Estimate component importance\n4) Estimate time to fail destribution\n5) Estimate faults count destribution\n6) Exit" );
+op = 0;
+repeat
+   local ops = io.read();
+   if ops == "1" or ops == "2" or ops == "3" or ops == "4" or ops == "5" or ops == "6" then op = tonumber( ops ) end
+   until op ~= 0
 
--- destr = estimateTimeToFailDestribution( 1000, 0.0001 );
--- for i = 1, 1000 do
---    print( destr[ i ] .. ", " );
---    end
+if op >= 1 and op <= 5 then
+   print( "Start simulation..." );
+   lengths = { 10, 10, 10 };
+   intervals = { { 0.00001, 0.0001 }, { 0.0, 1000.0 }, { 0.0, 1000.0 } };
+
+   if op == 1 then
+      delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
+      for i = 0, lengths[ op ] - 1 do
+         x = intervals[ op ][ 1 ] + i * delta;
+         destr = createExponentialDestribution( x );
+         manager = createAbstractWeightsManager( destr, net.weights, retrainNetwork );
+         engine = createSimulationEngine();
+         appendInterruptManager( engine, manager );
+         y, dyl, dyh = reliability.estimateTimeToFail( 121, engine, testNetwork );
+         print( x * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
+         closeId( engine );
+         closeId( manager );
+         closeId( destr );
+         end
+
+   elseif op >= 2 and op <= 5 then
+      destr = createExponentialDestribution( 0.0001 );
+      manager = createAbstractWeightsManager( destr, net.weights, retrainNetwork );
+      engine = createSimulationEngine();
+      appendInterruptManager( engine, manager );
+      if op == 2 then
+         delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
+         for i = 0, lengths[ op ] - 1 do
+            x = intervals[ op ][ 1 ] + i * delta;
+            y, dyl, dyh = reliability.estimateSurvivalFunction( x, 121, engine, testNetwork );
+            print( x / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+            end
+
+      elseif op == 3 then
+         delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
+         for i = 0, lengths[ op ] - 1 do
+            x = intervals[ op ][ 1 ] + i * delta;
+            y, dyl, dyh = reliability.estimateComponentImportance( x, 121, engine, testNetwork, manager, 91 );
+            print( x / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+            end
+
+      elseif op == 4 then
+         x = reliability.estimateTimeToFailDestribution( 200, engine, testNetwork );
+         for i = 1, #x do print( x[ i ] / 1000 .. ", " ) end
+      elseif op == 5 then
+         x = reliability.estimateFaultsCountDestribution( 200, engine, testNetwork, manager );
+         for i = 0, net.weightsCount do print( x[ i ] .. ", " ) end
+         end
+
+      closeId( engine );
+      closeId( manager );
+      closeId( destr );
+      end
+   end
 
 -- Close objects;
-perceptron.destroy( net );
+abstract.MultilayerPerceptron.destroy( net );
 closeId( sigActFunc );
 closeId( linActFunc );
 

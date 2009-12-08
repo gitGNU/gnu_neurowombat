@@ -22,6 +22,45 @@
 
 
 #include <math.h>
+#include <lua.hpp>
+
+
+#include "kernel/Kernel.h"
+
+
+// It is better for API functions to use this pointer instead of
+// Kernel::instance() and Kernel::freeInstance() methods;
+extern Kernel * kernel;
+
+
+inline double useCoefficient( COEFF_USAGE::T_COEFF_USAGE coeffUsage, double x, double c )
+   {
+   switch ( coeffUsage )
+      {
+      case COEFF_USAGE::NOP:
+         break;
+      case COEFF_USAGE::ADD_TO:
+         x += c;
+         break;
+      case COEFF_USAGE::MUL_BY:
+         x *= c;
+         break;
+      case COEFF_USAGE::SUB_IT_FROM:
+         x -= c;
+         break;
+      case COEFF_USAGE::SUB_FROM_IT:
+         x = c - x;
+         break;
+      case COEFF_USAGE::DIV_IT_BY:
+         x = c / x;
+         break;
+      case COEFF_USAGE::DIV_BY_IT:
+         x /= c;
+         break;
+      }
+
+   return x;
+   };
 
 
 /***************************************************************************
@@ -47,18 +86,17 @@ AbstractProcessor::~AbstractProcessor()
  ***************************************************************************/
 
 
-AbstractCustomProcessor::AbstractCustomProcessor( lua_State * L, int processRef, bool useMultiplier )
+AbstractCustomProcessor::AbstractCustomProcessor( CustomFunction * processingFunc )
    : AbstractProcessor()
    {
-   this->L = L;
-   this->processRef = processRef;
-   this->useMultiplier = useMultiplier;
+   this->processingFunc = processingFunc;
+   if ( processingFunc != NULL ) processingFunc->capture();
    };
 
 
 AbstractCustomProcessor::~AbstractCustomProcessor()
    {
-   luaL_unref( L, LUA_REGISTRYINDEX, processRef );
+   if ( processingFunc != NULL ) processingFunc->release();
    };
 
 
@@ -71,9 +109,8 @@ double AbstractCustomProcessor::process(
    unsigned int weightsBaseIndex
    )
    {
-   lua_rawgeti( L, LUA_REGISTRYINDEX, processRef );
-
-   int parametersCount = 2;
+   lua_State * L = kernel->getVM();
+   lua_rawgeti( L, LUA_REGISTRYINDEX, processingFunc->getFunctionReference() );
 
    // Push signals array;
    lua_newtable( L );
@@ -97,12 +134,6 @@ double AbstractCustomProcessor::process(
          lua_pushnumber( L, builtInWeights[ i ] );
          lua_rawset( L, -3 );
          }
-
-      if ( useMultiplier )
-         {
-         lua_pushnumber( L, builtInWeights[ inputsCount ] );
-         parametersCount ++;
-         }
       }
    else
       {
@@ -115,15 +146,9 @@ double AbstractCustomProcessor::process(
          lua_pushnumber( L, weights->getWeight( weightsBaseIndex + i ) );
          lua_rawset( L, -3 );
          }
-
-      if ( useMultiplier )
-         {
-         lua_pushnumber( L, weights->getWeight( weightsBaseIndex + inputsCount ) );
-         parametersCount ++;
-         }
       }
 
-   lua_pcall( L, parametersCount, 1, 0 );
+   lua_pcall( L, 2, 1, 0 );
    double result = lua_tonumber( L, -1 );
    lua_pop( L, 1 );
    return result;
@@ -135,10 +160,10 @@ double AbstractCustomProcessor::process(
  ***************************************************************************/
 
 
-AbstractRadialBasisProcessor::AbstractRadialBasisProcessor( bool useMultiplier )
+AbstractRadialBasisProcessor::AbstractRadialBasisProcessor( COEFF_USAGE::T_COEFF_USAGE coeffUsage )
    : AbstractProcessor()
    {
-   this->useMultiplier = useMultiplier;
+   this->coeffUsage = coeffUsage;
    };
 
 
@@ -157,6 +182,8 @@ double AbstractRadialBasisProcessor::process(
    unsigned int weightsBaseIndex
    )
    {
+   if ( coeffUsage != COEFF_USAGE::NOP ) inputsCount --;
+
    // Calculate distance between input signals and weights;
    double dist = 0.0;
    double buffer = 0.0;
@@ -171,10 +198,10 @@ double AbstractRadialBasisProcessor::process(
          dist += buffer * buffer;
          }
 
-      if ( useMultiplier )
+      if ( coeffUsage != COEFF_USAGE::NOP )
          {
-         buffer = builtInWeights[ inputsCount ];
-         dist *= buffer * buffer;
+         buffer = builtInWeights[ inputsCount ] *
+            connectors->getSignal( inputConnectors[ inputsCount ] );
          }
       }
    else
@@ -188,14 +215,17 @@ double AbstractRadialBasisProcessor::process(
          dist += buffer * buffer;
          }
 
-      if ( useMultiplier )
+      if ( coeffUsage != COEFF_USAGE::NOP )
          {
-         buffer = weights->getWeight( weightsBaseIndex + inputsCount );
-         dist *= buffer * buffer;
+         buffer = weights->getWeight( weightsBaseIndex + inputsCount ) *
+            connectors->getSignal( inputConnectors[ inputsCount ] );
          }
       }
 
-   return sqrt( dist );
+   dist = useCoefficient( coeffUsage, dist, buffer );
+   dist = sqrt( dist );
+
+   return dist;
    };
 
 

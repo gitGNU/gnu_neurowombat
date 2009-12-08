@@ -27,27 +27,27 @@
 
 
 InterruptManager::InterruptManager(
-   int numIntSources,
+   unsigned int intSourcesCount,
    bool unlimitRegeneration,
    Destribution * destribution
    )
    {
-   // Clear faults counter;
+   // Clear interrupts counter;
    this->interruptsCount = 0;
 
    // Initialize interrupts array with NULL;
    this->interrupts = NULL;
 
    // Try to allocate memory for interrupts;
-   if ( numIntSources > 0 )
+   if ( intSourcesCount > 0 )
       {
-      this->interrupts = new double[ numIntSources ];
+      this->interrupts = new double[ intSourcesCount ];
       }
 
    if ( this->interrupts != NULL )
       {
       // Set number of interrupt sources;
-      this->numIntSources = numIntSources;
+      this->intSourcesCount = intSourcesCount;
 
       // Set regeneration limit;
       this->unlimitRegeneration = unlimitRegeneration;
@@ -59,7 +59,7 @@ InterruptManager::InterruptManager(
       if ( destribution != NULL ) destribution->capture();
 
       // Generate interrupts;
-      for ( int i = 0; i < numIntSources; i ++ )
+      for ( int i = 0; i < intSourcesCount; i ++ )
          {
          this->interrupts[ i ] = this->destribution->generateTime();
          }
@@ -72,7 +72,7 @@ InterruptManager::InterruptManager(
       }
    else
       {
-      this->numIntSources = 0;
+      this->intSourcesCount = 0;
       this->intSource = -1;
       this->lastIntSource = -1;
       this->unlimitRegeneration = false;
@@ -109,9 +109,15 @@ int InterruptManager::getIntSource()
    };
 
 
-unsigned int InterruptManager::getInterruptsCount()
+unsigned int InterruptManager::getIntSourcesCount() const
    {
-   return this->interruptsCount;
+   return intSourcesCount;
+   };
+
+
+unsigned int InterruptManager::getInterruptsCount() const
+   {
+   return interruptsCount;
    };
 
 
@@ -139,6 +145,25 @@ void InterruptManager::handleInterrupt()
    };
 
 
+void InterruptManager::reinit()
+   {
+   // Clear interrupts counter;
+   this->interruptsCount = 0;
+
+   // Generate interrupts;
+   for ( int i = 0; i < intSourcesCount; i ++ )
+      {
+      this->interrupts[ i ] = this->destribution->generateTime();
+      }
+
+   // Clear int source;
+   this->intSource = -1;
+
+   // Find out interrupt source;
+   this->findOutIntSource();
+   };
+
+
 InterruptManager::InterruptManager()
    {
    // Do nothing;
@@ -156,7 +181,7 @@ void InterruptManager::findOutIntSource()
    int i = 0;
 
    // Initialize minimum;
-   while ( i < this->numIntSources )
+   while ( i < intSourcesCount )
       {
       if ( this->interrupts[ i ] >= 0.0 )
          {
@@ -169,7 +194,7 @@ void InterruptManager::findOutIntSource()
       }
 
    // Search for minimum;
-   while ( i < this->numIntSources )
+   while ( i < intSourcesCount )
       {
       if ( this->interrupts[ i ] >= 0.0 && this->interrupts[ i ] < min )
          {

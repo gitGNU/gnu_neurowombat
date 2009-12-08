@@ -72,16 +72,7 @@ extern "C" int getSignals( lua_State * L );
 extern "C" int setSignals( lua_State * L );
 
 
-extern "C" int createAbstractCustomProcessor( lua_State * L );
-
-
-extern "C" int createAbstractRadialBasisProcessor( lua_State * L );
-
-
-extern "C" int createAbstractScalarProcessor( lua_State * L );
-
-
-extern "C" int createAbstractWeightedSumProcessor( lua_State * L );
+extern "C" int createAbstractProcessor( lua_State * L );
 
 
 extern "C" int createAbstractWeights( lua_State * L );
@@ -97,6 +88,9 @@ extern "C" int createAbstractNeuron( lua_State * L );
 
 
 extern "C" int computeAbstractNeurons( lua_State * L );
+
+
+extern "C" int computeAbstractNeuronsC( lua_State * L );
 
 
 extern "C" int trainBPAbstractNeurons( lua_State * L );
@@ -142,28 +136,7 @@ extern "C" int computeAnalogNeurons( lua_State * L );
  ***************************************************************************/
 
 
-extern "C" int createCustomActFunc( lua_State * L );
-
-
-extern "C" int createGaussianActFunc( lua_State * L );
-
-
-extern "C" int createLimActFunc( lua_State * L );
-
-
-extern "C" int createLinearActFunc( lua_State * L );
-
-
-extern "C" int createLimLinearActFunc( lua_State * L );
-
-
-extern "C" int createPosLinearActFunc( lua_State * L );
-
-
-extern "C" int createSigmoidActFunc( lua_State * L );
-
-
-extern "C" int createThSigmoidActFunc( lua_State * L );
+extern "C" int createActFunc( lua_State * L );
 
 
 extern "C" int calcMeanCI( lua_State * L );
@@ -193,6 +166,18 @@ extern "C" int createSimulationEngine( lua_State * L );
 
 
 extern "C" int appendInterruptManager( lua_State * L );
+
+
+extern "C" int getIntSourcesCount( lua_State * L );
+
+
+extern "C" int getInterruptsCount( lua_State * L );
+
+
+extern "C" int simulateInterrupt( lua_State * L );
+
+
+extern "C" int restartEngine( lua_State * L );
 
 
 extern "C" int stepOverEngine( lua_State * L );

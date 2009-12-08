@@ -84,7 +84,7 @@ function train( network, vectors )
          w[ j + 1 ] = w[ j + 1 ] / network.neuronsCount;
          end
 
-         setupAnalogResistors( network.resistors, 2 * ( network.neuronsCount - 1 ) * i, network.neuronsCount - 1, w, 2 );
+      setupAnalogResistors( network.resistors, 2 * ( network.neuronsCount - 1 ) * i, network.neuronsCount - 1, w, 2 );
       end
    end
 

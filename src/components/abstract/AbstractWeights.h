@@ -24,6 +24,7 @@
 
 #include "kernel/KernelObject.h"
 #include "engine/InterruptManager.h"
+#include "objects/CustomFunction.h"
 
 
 /***************************************************************************
@@ -60,15 +61,20 @@ class AbstractWeightsManager : public InterruptManager
       AbstractWeightsManager();
       AbstractWeightsManager(
          Destribution * destribution,
-         AbstractWeights * abstractWeights
+         AbstractWeights * abstractWeights,
+         CustomFunction * fixFunction
          );
 
       virtual ~AbstractWeightsManager();
 
+      virtual void simulateInterrupt( unsigned int intSource );
       virtual void handleInterrupt();
+      virtual void reinit();
 
    private:
       AbstractWeights * abstractWeights;
+      CustomFunction * fixFunction;
+      double * weightsBackup;
    };
 
 

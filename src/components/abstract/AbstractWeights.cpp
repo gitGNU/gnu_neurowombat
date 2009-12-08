@@ -84,7 +84,8 @@ AbstractWeightsManager::AbstractWeightsManager()
 
 AbstractWeightsManager::AbstractWeightsManager(
    Destribution * destribution,
-   AbstractWeights * abstractWeights
+   AbstractWeights * abstractWeights,
+   CustomFunction * fixFunction
    )
    : InterruptManager(
       ( abstractWeights != NULL ) ? abstractWeights->count() : 0,
@@ -96,6 +97,31 @@ AbstractWeightsManager::AbstractWeightsManager(
 
    // Capture object;
    if ( abstractWeights != NULL ) abstractWeights->capture();
+
+   this->fixFunction = fixFunction;
+
+   if ( fixFunction != NULL )
+      {
+      fixFunction->capture();
+      weightsBackup = NULL;
+      }
+   else
+      {
+      // Create backup for weights;
+      unsigned int weightsBackupLength = abstractWeights->count();
+      if ( weightsBackupLength > 0 )
+         {
+         weightsBackup = new double[ weightsBackupLength ];
+         for ( unsigned int i = 0; i < weightsBackupLength; i ++ )
+            {
+            weightsBackup[ i ] = abstractWeights->getWeight( i );
+            }
+         }
+      else
+         {
+         weightsBackup = NULL;
+         }
+      }
    };
 
 
@@ -103,18 +129,50 @@ AbstractWeightsManager::~AbstractWeightsManager()
    {
    // Release captured object;
    if ( abstractWeights != NULL ) abstractWeights->release();
+   if ( fixFunction != NULL ) fixFunction->release();
+
+   if ( weightsBackup != NULL ) delete[] weightsBackup;
+   };
+
+
+void AbstractWeightsManager::simulateInterrupt( unsigned int intSource )
+   {
+   if ( intSource < intSourcesCount && abstractWeights != NULL )
+      {
+      abstractWeights->setWeight( intSource, 0.0 );
+      }
    };
 
 
 void AbstractWeightsManager::handleInterrupt()
    {
    // Break up weight;
-   int weightIndex = this->getIntSource();
-   if ( weightIndex >= 0 && this->abstractWeights != NULL )
+   int weightIndex = getIntSource();
+   if ( weightIndex >= 0 && abstractWeights != NULL )
       {
-      this->abstractWeights->setWeight( weightIndex, 0.0 );
+      abstractWeights->setWeight( weightIndex, 0.0 );
       }
 
    // Pass control to base implementation;
    InterruptManager::handleInterrupt();
+   };
+
+
+void AbstractWeightsManager::reinit()
+   {
+   // Call base implementation;
+   InterruptManager::reinit();
+
+   if ( fixFunction != NULL )
+      {
+      fixFunction->call();
+      }
+   else
+      {
+      // Restore weights from backup;
+      for ( unsigned int i = 0; i < abstractWeights->count(); i ++ )
+         {
+         abstractWeights->setWeight( i, weightsBackup[ i ] );
+         }
+      }
    };

@@ -81,6 +81,9 @@ void SimulationEngine::deleteManager( unsigned int index )
       // throw SimulationEngineExcp( NS_SIMULATIONENGINE::INDEX_OUT_OF_RANGE );
       }
 
+   // Release captured object;
+   this->managers[ index ]->release();
+
    this->managers.erase( this->managers.begin() + index );
    };
 
@@ -88,6 +91,21 @@ void SimulationEngine::deleteManager( unsigned int index )
 void SimulationEngine::clear()
    {
    this->managers.clear();
+   this->currentTime = 0.0;
+   this->currentIntSource = NULL;
+   this->futureIntSource = NULL;
+   };
+
+
+void SimulationEngine::restart()
+   {
+   // Reinit all the managers;
+   for ( int i = this->managers.size() - 1; i >= 0; i -- )
+      {
+      if ( this->managers[ i ] != NULL ) this->managers[ i ]->reinit();
+      }
+
+   this->currentTime = 0.0;
    this->currentIntSource = NULL;
    this->futureIntSource = NULL;
    };

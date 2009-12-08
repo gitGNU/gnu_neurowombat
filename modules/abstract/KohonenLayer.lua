@@ -22,16 +22,16 @@ module( ..., package.seeall )
 -- Function for neurons competition;
 local function getWinner( x )
    local index = 1;
-   local max = x[ 1 ];
+   local min = x[ 1 ];
    for i = 2, #x do
-      if x[ i ] > max then
-         max = x[ i ];
+      if x[ i ] < min then
+         min = x[ i ];
          index = i;
          end
       end
 
    return index;
-end
+   end
 
 
 -- Function for calculating initial weights;
@@ -44,7 +44,7 @@ local function getInitWeight( vectors, i )
       end
 
    return ( max + min ) / 2.0;
-end
+   end
 
 
 function create( inputs, neurons )
@@ -54,29 +54,31 @@ function create( inputs, neurons )
    network.neurons = {};
    network.activatorsCount = 0;
    network.activators = 0;
-   network.actFunc = createLinearActFunc( 1.0, 0.0 );
+   network.actFunc = createActFunc( ACT_FUNC.LINEAR, 1.0, 0.0 );
    network.buffersCount = 0;
    network.buffers = 0;
-   network.connectorsCount = 1 + inputs + neurons;
+   network.connectorsCount = inputs + 1 + neurons;
    network.connectors = createAbstractConnectors( network.connectorsCount );
    network.weightsCount = ( inputs + 1 ) * neurons;
    network.weights = createAbstractWeights( network.weightsCount );
-   network.processor = createAbstractWeightedSumProcessor();
+   network.processor = createAbstractProcessor( ABSTRACT_PROCESSOR.RADIAL_BASIS, COEFF_USAGE.ADD_TO );
 
-   -- Set 1.0 signal for 0-connector;
-   setSignals( network.connectors, 0, { 1.0 } );
+   -- Set 1.0 signal for input'th connector;
+   setSignals( network.connectors, inputs, { 1.0 } );
 
    -- Create neurons layer;
-   local inputConnectors = { 0 };
+   inputConnectors = {};
    for i = 1, inputs do
-      inputConnectors[ i + 1 ] = i;
+      inputConnectors[ i ] = i - 1;
       end
+
+   inputConnectors[ inputs + 1 ] = inputs;
 
    for i = 0, neurons - 1 do
       network.neurons[ i + 1 ] = createAbstractNeuron(
          inputs + 1,
          inputConnectors,
-         network.connectors, 1 + inputs + i,
+         network.connectors, inputs + 1 + i,
          network.weights, ( inputs + 1 ) * i,
          0, 0,
          network.processor,
@@ -100,12 +102,12 @@ function destroy( network )
    end;
 
 
-function train( network, vectors, epochs, speed )
+function train( network, vectors, epochs, wSpeed, bSpeed )
    -- Initial setup;
    local w = {};
-   w[ 1 ] = network.neuronsCount * math.exp( 1.0 );
-   for i = 2, network.inputs + 1 do
-      w[ i ] = getInitWeight( vectors, i - 1 );
+   w[ network.inputs + 1 ] = network.neuronsCount * math.exp( 1.0 );
+   for i = 1, network.inputs do
+      w[ i ] = getInitWeight( vectors, i );
       end
 
    for i = 1, network.neuronsCount do
@@ -116,27 +118,26 @@ function train( network, vectors, epochs, speed )
    local c = {};
    for i = 1, network.neuronsCount do c[ i ] = 1.0 / network.neuronsCount; end
 
-   local L = 0.001;
    local x = {};
    for i = 0, epochs - 1 do
       -- Compute;
       winner = compute( network, vectors[ i % #vectors + 1 ] );
 
       for j = 1, network.neuronsCount do
-         w = getAbstractWeights( network.weights, ( network.inputs + 1 ) * ( j - 1 ), network.inputs + 1 );
+         w = getAbstractWeights( network.neurons[ j ] );
 
          if j == winner then
             -- Modify weights;
-            for k = 2, network.inputs + 1 do
-               w[ k ] = w[ k ] + speed * ( vectors[ i % #vectors + 1 ][ k - 1 ] - w[ k ] );
+            for k = 1, network.inputs do
+               w[ k ] = w[ k ] + wSpeed * ( vectors[ i % #vectors + 1 ][ k ] - w[ k ] );
                end
 
-            c[ j ] = c[ j ] + L * ( 1.0 - c[ j ] );
+            c[ j ] = c[ j ] + bSpeed * ( 1.0 - c[ j ] );
          else
-            c[ j ] = c[ j ] * ( 1.0 - L );
+            c[ j ] = c[ j ] * ( 1.0 - bSpeed );
          end
 
-         w[ 1 ] = math.exp( 1.0 - math.log( c[ j ] ) );
+         w[ network.inputs + 1 ] = math.exp( 1.0 - math.log( c[ j ] ) );
          setAbstractWeights( network.neurons[ j ], w );
          end
       end
@@ -144,8 +145,8 @@ function train( network, vectors, epochs, speed )
 
 
 function compute( network, x )
-   setSignals( network.connectors, 1, x );
+   setSignals( network.connectors, 0, x );
    computeAbstractNeurons( network.neurons, 1 );
-   return getWinner( getSignals( network.connectors, 1 + network.inputs, network.neuronsCount ) );
+   return getWinner( getSignals( network.connectors, network.inputs + 1, network.neuronsCount ) );
    end
 

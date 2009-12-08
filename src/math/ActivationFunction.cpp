@@ -47,48 +47,49 @@ ActivationFunction::~ActivationFunction()
  ***************************************************************************/
 
 
-CustomActivationFunction::CustomActivationFunction( lua_State * L, int functionRef, int derivativeRef )
+CustomActivationFunction::CustomActivationFunction( CustomFunction * customFunction, CustomFunction * customDerivative )
    : ActivationFunction()
    {
-   this->L = L;
-   this->functionRef = functionRef;
-   this->derivativeRef = derivativeRef;
+   this->customFunction = customFunction;
+   this->customDerivative = customDerivative;
+
+   if ( customFunction != NULL ) customFunction->capture();
+   if ( customDerivative != NULL ) customDerivative->capture();
    };
 
 
 CustomActivationFunction::~CustomActivationFunction()
    {
-   luaL_unref( L, LUA_REGISTRYINDEX, functionRef );
-   luaL_unref( L, LUA_REGISTRYINDEX, derivativeRef );
+   if ( customFunction != NULL ) customFunction->release();
+   if ( customDerivative != NULL ) customDerivative->release();
    };
 
 
 ActivationFunction * CustomActivationFunction::clone()
    {
-   // THIS OBJECT CAN'T BE CLONED!!!
    return new CustomActivationFunction( * this );
    };
 
 
 double CustomActivationFunction::evaluateFunction( double x )
    {
-   lua_rawgeti( L, LUA_REGISTRYINDEX, functionRef );
-   lua_pushnumber( L, x );
-   lua_pcall( L, 1, 1, 0 );
-   double result = lua_tonumber( L, -1 );
-   lua_pop( L, 1 );
-   return result;
+   return customFunction->call( x );
    };
 
 
 double CustomActivationFunction::evaluateDerivative( double x )
    {
-   lua_rawgeti( L, LUA_REGISTRYINDEX, derivativeRef );
-   lua_pushnumber( L, x );
-   lua_pcall( L, 1, 1, 0 );
-   double result = lua_tonumber( L, -1 );
-   lua_pop( L, 1 );
-   return result;
+   return customDerivative->call( x );
+   };
+
+
+CustomActivationFunction::CustomActivationFunction( const CustomActivationFunction & other )
+   {
+   customFunction = other.customFunction;
+   customDerivative = other.customDerivative;
+
+   if ( customFunction != NULL ) customFunction->capture();
+   if ( customDerivative != NULL ) customDerivative->capture();
    };
 
 
@@ -299,10 +300,10 @@ double PosLinearActivationFunction::evaluateDerivative( double x )
  ***************************************************************************/
 
 
-SigmoidActivationFunction::SigmoidActivationFunction()
+SigmoidActivationFunction::SigmoidActivationFunction( double lambda )
    : ActivationFunction()
    {
-   // Do nothing;
+   this->lambda = lambda;
    };
 
 
@@ -320,14 +321,14 @@ ActivationFunction * SigmoidActivationFunction::clone()
 
 double SigmoidActivationFunction::evaluateFunction( double x )
    {
-   return ( 1.0 / ( 1.0 + exp( - x ) ) );
+   return ( 1.0 / ( 1.0 + exp( - lambda * x ) ) );
    };
 
 
 double SigmoidActivationFunction::evaluateDerivative( double x )
    {
-   double f = 1.0 / ( 1.0 + exp( - x ) );
-   return f * ( 1 - f );
+   double f = 1.0 / ( 1.0 + exp( - lambda * x ) );
+   return lambda * f * ( 1 - f );
    };
 
 

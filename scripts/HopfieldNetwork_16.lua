@@ -32,6 +32,7 @@
 -- Otherwise it is considered to be in a fault state.
 
 require "analog.HopfieldNetwork";
+require "reliability";
 
 -- Function for testing Hopfield network;
 function testNetwork()
@@ -79,157 +80,6 @@ function testNetwork()
       end
 
    return ( hitsCount / totalCount >= 0.90 );
-end
-
--- Function for estimating time to fail destribution of Hopfield network;
-function estimateTimeToFailDestribution( times, lambda )
-   local d = {};
-   for i = 1, times do
-      analog.HopfieldNetwork.train( net, trainVectors );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, net.resistors );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      while stepOverEngine( engine ) do
-         if not testNetwork() then break end
-         end
-
-      d[ i ] = getCurrentTime( engine );
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      end
-
-   return d;
-   end
-
--- Function for estimating time to fail of Hopfield network;
-function estimateTimeToFail( times, lambda )
-   local t = 0.0;
-   local tsqr = 0.0;
-   for i = 1, times do
-      analog.HopfieldNetwork.train( net, trainVectors );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, net.resistors );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      repeat
-         if not testNetwork() then
-            local x = getCurrentTime( engine );
-            t = t + x;
-            tsqr = tsqr + x * x;
-            break;
-            end
-
-         until not stepOverEngine( engine )
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      io.write( i .. "" ); io.flush();
-      end
-
-   print( "end" );
-   t = t / times;
-   tsqr = tsqr / times;
-   local d = calcMeanCI( t, tsqr, times, 0.95 );
-   return t, t - d, t + d;
-   end
-
--- Function for estimating survival function of Hopfield network;
-function estimateSurvivalFunction( times, lambda, t )
-   local p = 0.0;
-   for i = 1, times do
-      analog.HopfieldNetwork.train( net, trainVectors );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, net.resistors );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      local tIsTooLarge = true;
-      repeat
-         if getCurrentTime( engine ) >= t then
-            if testNetwork() then p = p + 1.0 end
-            tIsTooLarge = false;
-            break;
-            end
-
-         until not stepOverEngine( engine )
-
-      if tIsTooLarge then
-         if testNetwork() then p = p + 1.0 end
-         end;
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      end
-
-   p = p / times;
-   return p, calcACProbabilityCI( p, times, 0.05 );
-   end
-
--- Function for estimating faults count destribution of Hopfield network;
-function estimateFaultsCountDestribution( times, lambda )
-   local d = {};
-   for i = 0, net.neuronsCount * ( net.neuronsCount - 1 ) * 2 do d[ i ] = 0 end
-   for i = 1, times do
-      analog.HopfieldNetwork.train( net, trainVectors );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, net.resistors );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      failesCount = 0;
-      while stepOverEngine( engine ) do
-         failesCount = failesCount + 1;
-         if not testNetwork() then break end
-
-         end
-
-      d[ failesCount ] = d[ failesCount ] + 1;
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      end
-
-   -- for i = 0, net.neuronsCount * ( net.neuronsCount - 1 ) * 2 do d[ i ] = d[ i ] / times end
-   return d;
-   end
-
--- Function for estimating resistor importance of Hopfield network;
-function estimateWeightImportance( times, lambda, resistorIndex, t )
-   local p = 0.0;
-   local m = 0; local s = -1;
-   for i = 1, times do
-      analog.HopfieldNetwork.train( net, trainVectors );
-      local destr = createExponentialDestribution( lambda );
-      local manager = createAnalogResistorsManager( destr, net.resistors );
-      local engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
-
-      if t >= getFutureTime( engine ) then
-         while stepOverEngine( engine ) do
-            if t < getFutureTime( engine ) then break end
-            end         
-         end
-
-      if testNetwork() then
-         setAnalogResistances( resistors, resistorIndex, { 0.0 } );
-         if not testNetwork() then p = p + 1.0 end
-         end
-
-      closeId( engine );
-      closeId( manager );
-      closeId( destr );
-      end
-
-   p = p / times;
-   return p, calcACProbabilityCI( p, times, 0.05 );
    end
 
 print( "API version: " .. apiVersion() );
@@ -251,27 +101,67 @@ analog.HopfieldNetwork.train( net, trainVectors );
 print( "[OK]" );
 
 -- Simulate Hopfield network;
-io.write( "Simulating ... " ); io.flush();
-print( "[OK]" );
+print( "Choose the option to do:\n1) Estimate time to fail\n2) Estimate survival function\n3) Estimate component importance\n4) Estimate time to fail destribution\n5) Estimate faults count destribution\n6) Exit" );
+op = 0;
+repeat
+   local ops = io.read();
+   if ops == "1" or ops == "2" or ops == "3" or ops == "4" or ops == "5" or ops == "6" then op = tonumber( ops ) end
+   until op ~= 0
 
-length = 7; x = {};
--- start = 0.00001; stop = 0.0001; delta = ( stop - start ) / ( length - 1 );
-start = 0.0; stop = 20000.0; delta = ( stop - start ) / ( length - 1 );
--- start = 9000.0; stop = 25000.0; delta = ( stop - start ) / ( length - 1 );
-for i = 0, length - 1 do
-   x[ i ] = start + i * delta;
-   -- y, dyl, dyh = estimateTimeToFail( 121, x[ i ] );
-   y, dyl, dyh = estimateSurvivalFunction( 500, 0.0001, x[ i ] );
-   -- y, dyl, dyh = estimateWeightImportance( 1000, 0.0001, 0, x[ i ] );
-   -- print( x[ i ] * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
-   print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
-   -- print( x[ i ] / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
-   end;
+if op >= 1 and op <= 5 then
+   print( "Start simulation..." );
+   lengths = { 10, 10, 10 };
+   intervals = { { 0.00001, 0.0001 }, { 0.0, 30000.0 }, { 9000.0, 25000.0 } };
 
--- destr = estimateTimeToFailDestribution( 1000, 0.0001 );
--- for i = 1, 1000 do
---    print( i .. " " .. destr[ i ] );
---    end
+   if op == 1 then
+      delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
+      for i = 0, lengths[ op ] - 1 do
+         x = intervals[ op ][ 1 ] + i * delta;
+         destr = createExponentialDestribution( x );
+         manager = createAnalogResistorsManager( destr, net.resistors, nil );
+         engine = createSimulationEngine();
+         appendInterruptManager( engine, manager );
+         y, dyl, dyh = reliability.estimateTimeToFail( 121, engine, testNetwork );
+         print( x * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
+         closeId( engine );
+         closeId( manager );
+         closeId( destr );
+         end
+
+   elseif op >= 2 and op <= 5 then
+      destr = createExponentialDestribution( 0.0001 );
+      manager = createAnalogResistorsManager( destr, net.resistors, nil );
+      engine = createSimulationEngine();
+      appendInterruptManager( engine, manager );
+      if op == 2 then
+         delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
+         for i = 0, lengths[ op ] - 1 do
+            x = intervals[ op ][ 1 ] + i * delta;
+            y, dyl, dyh = reliability.estimateSurvivalFunction( x, 500, engine, testNetwork );
+            print( x / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+            end
+
+      elseif op == 3 then
+         delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
+         for i = 0, lengths[ op ] - 1 do
+            x = intervals[ op ][ 1 ] + i * delta;
+            y, dyl, dyh = reliability.estimateComponentImportance( x, 1000, engine, testNetwork, manager, 0 );
+            print( x / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
+            end
+
+      elseif op == 4 then
+         x = reliability.estimateTimeToFailDestribution( 200, engine, testNetwork );
+         for i = 1, #x do print( x[ i ] / 1000 .. ", " ) end
+      elseif op == 5 then
+         x = reliability.estimateFaultsCountDestribution( 200, engine, testNetwork, manager );
+         for i = 0, net.resistorsCount do print( x[ i ] .. ", " ) end
+         end
+
+      closeId( engine );
+      closeId( manager );
+      closeId( destr );
+      end
+   end
 
 -- Close network;
 analog.HopfieldNetwork.destroy( net );

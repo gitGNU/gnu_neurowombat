@@ -22,10 +22,28 @@
 #define ACTIVATIONFUNCTION_H
 
 
-#include <lua.hpp>
-
-
 #include "kernel/KernelObject.h"
+#include "objects/CustomFunction.h"
+
+
+/***************************************************************************
+ *   T_ACT_FUNC enum declaration                                           *
+ ***************************************************************************/
+
+namespace ACT_FUNC
+   {
+   enum T_ACT_FUNC
+      {
+      CUSTOM,
+      GAUSSIAN,
+      LIM,
+      LINEAR,
+      LIMLINEAR,
+      POSLINEAR,
+      SIGMOID,
+      THSIGMOID
+      };
+   };
 
 
 /***************************************************************************
@@ -53,7 +71,7 @@ class ActivationFunction : public KernelObject
 class CustomActivationFunction : public ActivationFunction
    {
    public:
-      CustomActivationFunction( lua_State * L, int functionRef, int derivativeRef );
+      CustomActivationFunction( CustomFunction * customFunction, CustomFunction * customDerivative );
       virtual ~CustomActivationFunction();
       virtual ActivationFunction * clone();
 
@@ -61,9 +79,10 @@ class CustomActivationFunction : public ActivationFunction
       virtual double evaluateDerivative( double x );
 
    private:
-      lua_State * L;
-      int functionRef;
-      int derivativeRef;
+      CustomActivationFunction( const CustomActivationFunction & other );
+
+      CustomFunction * customFunction;
+      CustomFunction * customDerivative;
    };
 
 
@@ -182,12 +201,15 @@ class PosLinearActivationFunction : public ActivationFunction
 class SigmoidActivationFunction : public ActivationFunction
    {
    public:
-      SigmoidActivationFunction();
+      SigmoidActivationFunction( double lambda );
       virtual ~SigmoidActivationFunction();
       virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
+
+   private:
+      double lambda;
    };
 
 

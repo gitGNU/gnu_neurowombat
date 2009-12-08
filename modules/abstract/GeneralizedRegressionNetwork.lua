@@ -26,14 +26,20 @@ function create( inputs, layer1, layer2 )
    network.neurons = { {}, {} };
    network.activatorsCount = 0;
    network.activators = 0;
-   network.actFuncs = { createGaussianActFunc( 1.0 ), createLinearActFunc( 1.0, 0.0 ) };
+   network.actFuncs = { createActFunc( ACT_FUNC.GAUSSIAN, 1.0 ), createActFunc( ACT_FUNC.LINEAR, 1.0, 0.0 ) };
    network.buffersCount = 0;
    network.buffers = 0;
-   network.connectorsCount = inputs + layer1 + layer2;
+   network.connectorsCount = inputs + 1 + layer1 + layer2;
    network.connectors = createAbstractConnectors( network.connectorsCount );
    network.weightsCount = ( inputs + 1 ) * layer1 + layer1 * layer2;
    network.weights = createAbstractWeights( network.weightsCount );
-   network.processors = { createAbstractRadialBasisProcessor( 1 ), createAbstractScalarProcessor() };
+   network.processors = {
+      createAbstractProcessor( ABSTRACT_PROCESSOR.RADIAL_BASIS, COEFF_USAGE.MUL_BY ),
+      createAbstractProcessor( ABSTRACT_PROCESSOR.SCALAR )
+      };
+
+   -- Set 1.0 signal for input'th connector;
+   setSignals( network.connectors, inputs, { 1.0 } );
 
    -- Create radial basis layer;
    local inputConnectors = {};
@@ -41,11 +47,13 @@ function create( inputs, layer1, layer2 )
       inputConnectors[ i ] = i - 1;
       end
 
+   inputConnectors[ inputs + 1 ] = inputs;
+
    for i = 0, layer1 - 1 do
       network.neurons[ 1 ][ i + 1 ] = createAbstractNeuron(
-         inputs,
+         inputs + 1,
          inputConnectors,
-         network.connectors, inputs + i,
+         network.connectors, inputs + 1 + i,
          network.weights, ( inputs + 1 ) * i,
          0, 0,
          network.processors[ 1 ],
@@ -56,14 +64,14 @@ function create( inputs, layer1, layer2 )
    -- Create scalar layer;
    inputConnectors = {};
    for i = 1, layer1 do
-      inputConnectors[ i ] = inputs + i - 1;
+      inputConnectors[ i ] = inputs + i;
       end
 
    for i = 0, layer2 - 1 do
       network.neurons[ 2 ][ i + 1 ] = createAbstractNeuron(
          layer1,
          inputConnectors,
-         network.connectors, inputs + layer1 + i,
+         network.connectors, inputs + 1 + layer1 + i,
          network.weights, ( inputs + 1 ) * layer1 + layer1 * i,
          0, 0,
          network.processors[ 2 ],
@@ -97,7 +105,7 @@ function train( network, vectors, spread )
    w[ network.inputs + 1 ] = 0.8326 / spread;
    for i = 1, #network.neurons[ 1 ] do
       for j = 1, network.inputs do w[ j ] = vectors[ i ][ 1 ][ j ] end
-      setAbstractWeights( network.weights, ( network.inputs + 1 ) * ( i - 1 ), w );
+      setAbstractWeights( network.neurons[ 1 ][ i ], w );
       end
 
    -- Set linear layer weights;
@@ -113,6 +121,6 @@ function compute( network, x )
    setSignals( network.connectors, 0, x );
    computeAbstractNeurons( network.neurons[ 1 ], 1 );
    computeAbstractNeurons( network.neurons[ 2 ], 1 );
-   return getSignals( network.connectors, network.inputs + #network.neurons[ 1 ], #network.neurons[ 2 ] );
+   return getSignals( network.connectors, network.inputs + 1 + #network.neurons[ 1 ], #network.neurons[ 2 ] );
    end
 

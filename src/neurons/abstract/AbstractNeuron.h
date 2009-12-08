@@ -94,6 +94,8 @@ class AbstractNeuron : public KernelObject
 
       double getOutput();
 
+      double leftCompute();
+      void rightCompute( double processorOut );
       void compute();
 
       void createDampingBuffers();

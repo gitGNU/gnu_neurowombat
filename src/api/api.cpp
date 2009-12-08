@@ -39,8 +39,9 @@
 #include "components/analog/AnalogWires.h"
 #include "neurons/analog/AnalogNeuron.h"
 #include "engine/SimulationEngine.h"
-#include "math/Destribution.h"
 #include "math/ActivationFunction.h"
+#include "math/Destribution.h"
+#include "math/OdeSystemSolver.h"
 
 
 
@@ -80,15 +81,13 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "createAbstractConnectors", createAbstractConnectors );
    lua_register( L, "getSignals", getSignals );
    lua_register( L, "setSignals", setSignals );
-   lua_register( L, "createAbstractCustomProcessor", createAbstractCustomProcessor );
-   lua_register( L, "createAbstractRadialBasisProcessor", createAbstractRadialBasisProcessor );
-   lua_register( L, "createAbstractScalarProcessor", createAbstractScalarProcessor );
-   lua_register( L, "createAbstractWeightedSumProcessor", createAbstractWeightedSumProcessor );
+   lua_register( L, "createAbstractProcessor", createAbstractProcessor );
    lua_register( L, "createAbstractWeights", createAbstractWeights );
    lua_register( L, "getAbstractWeights", getAbstractWeights );
    lua_register( L, "setAbstractWeights", setAbstractWeights );
    lua_register( L, "createAbstractNeuron", createAbstractNeuron );
    lua_register( L, "computeAbstractNeurons", computeAbstractNeurons );
+   lua_register( L, "computeAbstractNeuronsC", computeAbstractNeuronsC );
    lua_register( L, "trainBPAbstractNeurons", trainBPAbstractNeurons );
    // Register analog neuron API functions;
    lua_register( L, "createAnalogComparators", createAnalogComparators );
@@ -102,14 +101,7 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "createAnalogNeuron", createAnalogNeuron );
    lua_register( L, "computeAnalogNeurons", computeAnalogNeurons );
    // Math API functions;
-   lua_register( L, "createCustomActFunc", createCustomActFunc );
-   lua_register( L, "createGaussianActFunc", createGaussianActFunc );
-   lua_register( L, "createLimActFunc", createLimActFunc );
-   lua_register( L, "createLinearActFunc", createLinearActFunc );
-   lua_register( L, "createLimLinearActFunc", createLimLinearActFunc );
-   lua_register( L, "createPosLinearActFunc", createPosLinearActFunc );
-   lua_register( L, "createSigmoidActFunc", createSigmoidActFunc );
-   lua_register( L, "createThSigmoidActFunc", createThSigmoidActFunc );
+   lua_register( L, "createActFunc", createActFunc );
    lua_register( L, "calcMeanCI", calcMeanCI );
    lua_register( L, "calcACProbabilityCI", calcACProbabilityCI );
    // Simulation engine API functions;
@@ -119,6 +111,10 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "createAnalogResistorsManager", createAnalogResistorsManager );
    lua_register( L, "createSimulationEngine", createSimulationEngine );
    lua_register( L, "appendInterruptManager", appendInterruptManager );
+   lua_register( L, "getIntSourcesCount", getIntSourcesCount );
+   lua_register( L, "getInterruptsCount", getInterruptsCount );
+   lua_register( L, "simulateInterrupt", simulateInterrupt );
+   lua_register( L, "restartEngine", restartEngine );
    lua_register( L, "stepOverEngine", stepOverEngine );
    lua_register( L, "getCurrentTime", getCurrentTime );
    lua_register( L, "getFutureTime", getFutureTime );
@@ -327,58 +323,45 @@ int setSignals( lua_State * L )
    };
 
 
-int createAbstractCustomProcessor( lua_State * L )
+int createAbstractProcessor( lua_State * L )
    {
    KernelObjectId id = 0;
 
-   // Read luaFunction argument;
-   lua_pushvalue( L, 1 );
-   int processRef = luaL_ref( L, LUA_REGISTRYINDEX );
+   // Read processor argument;
+   int processor = luaL_checknumber( L, 1 );
 
-   // Read useMultiplier argument;
-   bool useMultiplier = luaL_checknumber( L, 2 ) != 0;
+   switch ( processor )
+      {
+      case ABSTRACT_PROCESSOR::CUSTOM:
+         {
+         // Read luaFunction argument;
+         CustomFunction * luaFunction = new CustomFunction( 2 );
 
-   AbstractCustomProcessor * processor = new AbstractCustomProcessor( L, processRef, useMultiplier );
-   id = kernel->insertObject( processor );
+         id = kernel->insertObject( new AbstractCustomProcessor( luaFunction ) );
+         break;
+         }
+      case ABSTRACT_PROCESSOR::RADIAL_BASIS:
+         {
+         // Read coeffUsage argument;
+         COEFF_USAGE::T_COEFF_USAGE coeffUsage = ( COEFF_USAGE::T_COEFF_USAGE ) luaL_checknumber( L, 2 );
 
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createAbstractRadialBasisProcessor( lua_State * L )
-   {
-   KernelObjectId id = 0;
-
-   // Read useMultiplier argument;
-   bool useMultiplier = luaL_checknumber( L, 1 ) != 0;
-
-   AbstractRadialBasisProcessor * processor = new AbstractRadialBasisProcessor( useMultiplier );
-   id = kernel->insertObject( processor );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createAbstractScalarProcessor( lua_State * L )
-   {
-   KernelObjectId id = 0;
-
-   AbstractScalarProcessor * processor = new AbstractScalarProcessor();
-   id = kernel->insertObject( processor );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createAbstractWeightedSumProcessor( lua_State * L )
-   {
-   KernelObjectId id = 0;
-
-   AbstractWeightedSumProcessor * processor = new AbstractWeightedSumProcessor();
-   id = kernel->insertObject( processor );
+         id = kernel->insertObject( new AbstractRadialBasisProcessor( coeffUsage ) );
+         break;
+         }
+      case ABSTRACT_PROCESSOR::SCALAR:
+         {
+         id = kernel->insertObject( new AbstractScalarProcessor() );
+         break;
+         }
+      case ABSTRACT_PROCESSOR::WEIGHTED_SUM:
+         {
+         id = kernel->insertObject( new AbstractWeightedSumProcessor() );
+         break;
+         }
+      default:
+         // Do nothing;
+         break;
+      }
 
    lua_pushnumber( L, id );
    return 1;
@@ -401,7 +384,6 @@ int createAbstractWeights( lua_State * L )
    };
 
 
-// ERROR WITH HANDLING RADIAL-BASIS MULTIPLYER;
 int getAbstractWeights( lua_State * L )
    {
    // Read neuron argument;
@@ -599,6 +581,31 @@ int computeAbstractNeurons( lua_State * L )
          if ( neurons[ j ] != NULL ) neurons[ j ]->compute();
          }
       }
+
+   return 0;
+   };
+
+
+int computeAbstractNeuronsC( lua_State * L )
+   {
+   // Create vector for holding AbstractNeuron pointers;
+   std::vector < AbstractNeuron * > neurons;
+
+   // Read neurons argument;
+   _readKernelObjectsVector( L, 1, AbstractNeuron *, neurons );
+
+   // Read timeConstant argument;
+   double timeConstant = luaL_checkinteger( L, 2 );
+
+   // Read time argument;
+   double time = luaL_checkinteger( L, 3 );
+
+   // Read stepsCount argument;
+   unsigned int stepsCount = luaL_checkinteger( L, 4 );
+
+   // Solve AbstractNeuronsOdeSystem;
+   AbstractNeuronsOdeSystem odeSystem( & neurons, timeConstant );
+   OdeSystemSolver::solve( odeSystem, 0, time, stepsCount );
 
    return 0;
    };
@@ -1006,124 +1013,78 @@ int computeAnalogNeurons( lua_State * L )
  ***************************************************************************/
 
 
-int createCustomActFunc( lua_State * L )
+int createActFunc( lua_State * L )
    {
-   // Read luaFunction argument;
-   lua_pushvalue( L, 1 );
-   int functionRef = luaL_ref( L, LUA_REGISTRYINDEX );
+   KernelObjectId id = 0;
 
-   // Read luaDerivative argument;
-   lua_pushvalue( L, 2 );
-   int derivativeRef = luaL_ref( L, LUA_REGISTRYINDEX );
+   // Read actFunc argument;
+   int actFunc = luaL_checknumber( L, 1 );
 
-   CustomActivationFunction * actFunc = new CustomActivationFunction( L, functionRef, derivativeRef );
-   KernelObjectId id = kernel->insertObject( actFunc );
+   switch ( actFunc )
+      {
+      case ACT_FUNC::CUSTOM:
+         {
+         // Read luaFunction argument;
+         CustomFunction * luaFunction = new CustomFunction( 2 );
 
-   lua_pushnumber( L, id );
-   return 1;
-   };
+         // Read luaDerivative argument;
+         CustomFunction * luaDerivative = new CustomFunction( 3 );
 
-
-int createGaussianActFunc( lua_State * L )
-   {
-   // Read beta argument;
-   double beta = luaL_checknumber( L, 1 );
-
-   GaussianActivationFunction * actFunc = new GaussianActivationFunction( beta );
-   KernelObjectId id = kernel->insertObject( actFunc );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createLimActFunc( lua_State * L )
-   {
-   // Read xLim argument;
-   double xLim = luaL_checknumber( L, 1 );
-
-   // Read yLow argument;
-   double yLow = luaL_checknumber( L, 2 );
-
-   // Read yHigh argument;
-   double yHigh = luaL_checknumber( L, 3 );
-
-   LimActivationFunction * actFunc = new LimActivationFunction( xLim, yLow, yHigh );
-   KernelObjectId id = kernel->insertObject( actFunc );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createLinearActFunc( lua_State * L )
-   {
-   // Read a argument;
-   double a = luaL_checknumber( L, 1 );
-
-   // Read b argument;
-   double b = luaL_checknumber( L, 2 );
-
-   LinearActivationFunction * actFunc = new LinearActivationFunction( a, b );
-   KernelObjectId id = kernel->insertObject( actFunc );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createLimLinearActFunc( lua_State * L )
-   {
-   // Read a argument;
-   double a = luaL_checknumber( L, 1 );
-
-   // Read b argument;
-   double b = luaL_checknumber( L, 2 );
-
-   // Read xMin argument;
-   double xMin = luaL_checknumber( L, 3 );
-
-   // Read xMax argument;
-   double xMax = luaL_checknumber( L, 4 );
-
-   LimLinearActivationFunction * actFunc = new LimLinearActivationFunction( a, b, xMin, xMax );
-   KernelObjectId id = kernel->insertObject( actFunc );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createPosLinearActFunc( lua_State * L )
-   {
-   // Read a argument;
-   double a = luaL_checknumber( L, 1 );
-
-   // Read b argument;
-   double b = luaL_checknumber( L, 2 );
-
-   PosLinearActivationFunction * actFunc = new PosLinearActivationFunction( a, b );
-   KernelObjectId id = kernel->insertObject( actFunc );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createSigmoidActFunc( lua_State * L )
-   {
-   SigmoidActivationFunction * actFunc = new SigmoidActivationFunction();
-   KernelObjectId id = kernel->insertObject( actFunc );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createThSigmoidActFunc( lua_State * L )
-   {
-   ThSigmoidActivationFunction * actFunc = new ThSigmoidActivationFunction();
-   KernelObjectId id = kernel->insertObject( actFunc );
+         id = kernel->insertObject( new CustomActivationFunction( luaFunction, luaDerivative ) );
+         break;
+         }
+      case ACT_FUNC::GAUSSIAN:
+         {
+         double beta = luaL_checknumber( L, 2 );
+         id = kernel->insertObject( new GaussianActivationFunction( beta ) );
+         break;
+         }
+      case ACT_FUNC::LIM:
+         {
+         double xLim = luaL_checknumber( L, 2 );
+         double yLow = luaL_checknumber( L, 3 );
+         double yHigh = luaL_checknumber( L, 4 );
+         id = kernel->insertObject( new LimActivationFunction( xLim, yLow, yHigh ) );
+         break;
+         }
+      case ACT_FUNC::LINEAR:
+         {
+         double a = luaL_checknumber( L, 2 );
+         double b = luaL_checknumber( L, 3 );
+         id = kernel->insertObject( new LinearActivationFunction( a, b ) );
+         break;
+         }
+      case ACT_FUNC::LIMLINEAR:
+         {
+         double a = luaL_checknumber( L, 2 );
+         double b = luaL_checknumber( L, 3 );
+         double xMin = luaL_checknumber( L, 4 );
+         double xMax = luaL_checknumber( L, 5 );
+         id = kernel->insertObject( new LimLinearActivationFunction( a, b, xMin, xMax ) );
+         break;
+         }
+      case ACT_FUNC::POSLINEAR:
+         {
+         double a = luaL_checknumber( L, 2 );
+         double b = luaL_checknumber( L, 3 );
+         id = kernel->insertObject( new PosLinearActivationFunction( a, b ) );
+         break;
+         }
+      case ACT_FUNC::SIGMOID:
+         {
+         double lambda = luaL_checknumber( L, 2 );
+         id = kernel->insertObject( new SigmoidActivationFunction( lambda ) );
+         break;
+         }
+      case ACT_FUNC::THSIGMOID:
+         {
+         id = kernel->insertObject( new ThSigmoidActivationFunction() );
+         break;
+         }
+      default:
+         // Do nothing;
+         break;
+      }
 
    lua_pushnumber( L, id );
    return 1;
@@ -1235,8 +1196,14 @@ int createAbstractWeightsManager( lua_State * L )
    object = kernel->getObject( weightsId );
    AbstractWeights * weights = dynamic_cast < AbstractWeights * >( object );
 
-   AbstractWeightsManager * manager = new AbstractWeightsManager( destribution, weights );
-   id = kernel->insertObject( manager );
+   // Read fixFunction argument;
+   CustomFunction * fixFunction = NULL;
+   if ( ! lua_isnil( L, 3 ) )
+      {
+      fixFunction = new CustomFunction( 3 );
+      }
+
+   id = kernel->insertObject( new AbstractWeightsManager( destribution, weights, fixFunction ) );
 
    lua_pushnumber( L, id );
    return 1;
@@ -1258,8 +1225,14 @@ int createAnalogResistorsManager( lua_State * L )
    object = kernel->getObject( resistorsId );
    AnalogResistors * resistors = dynamic_cast < AnalogResistors * >( object );
 
-   AnalogResistorsManager * manager = new AnalogResistorsManager( destribution, resistors );
-   id = kernel->insertObject( manager );
+   // Read fixFunction argument;
+   CustomFunction * fixFunction = NULL;
+   if ( ! lua_isnil( L, 3 ) )
+      {
+      fixFunction = new CustomFunction( 3 );
+      }
+
+   id = kernel->insertObject( new AnalogResistorsManager( destribution, resistors, fixFunction ) );
 
    lua_pushnumber( L, id );
    return 1;
@@ -1293,6 +1266,59 @@ int appendInterruptManager( lua_State * L )
 
    // Append manager;
    engine->appendManager( manager );
+
+   return 0;
+   };
+
+
+int getIntSourcesCount( lua_State * L )
+   {
+   // Read manager argument;
+   KernelObjectId managerId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( managerId );
+   InterruptManager * manager = dynamic_cast < InterruptManager * >( object );
+
+   lua_pushnumber( L, manager->getIntSourcesCount() );
+   return 1;
+   };
+
+
+int getInterruptsCount( lua_State * L )
+   {
+   // Read manager argument;
+   KernelObjectId managerId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( managerId );
+   InterruptManager * manager = dynamic_cast < InterruptManager * >( object );
+
+   lua_pushnumber( L, manager->getInterruptsCount() );
+   return 1;
+   };
+
+
+int simulateInterrupt( lua_State * L )
+   {
+   // Read manager argument;
+   KernelObjectId managerId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( managerId );
+   InterruptManager * manager = dynamic_cast < InterruptManager * >( object );
+
+   // Read intSource argument;
+   unsigned int intSource = luaL_checkinteger( L, 1 );
+
+   manager->simulateInterrupt( intSource );
+   return 0;
+   };
+
+
+int restartEngine( lua_State * L )
+   {
+   // Read engine argument;
+   KernelObjectId engineId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( engineId );
+   SimulationEngine * engine = dynamic_cast < SimulationEngine * >( object );
+
+   // Restart engine;
+   engine->restart();
 
    return 0;
    };

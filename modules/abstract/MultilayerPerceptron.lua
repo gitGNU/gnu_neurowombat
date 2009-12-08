@@ -31,7 +31,7 @@ function create( inputs, layers, actFuncs )
    network.connectors = 0;
    network.weightsCount = 0;
    network.weights = 0;
-   network.processor = createAbstractWeightedSumProcessor();
+   network.processor = createAbstractProcessor( ABSTRACT_PROCESSOR.WEIGHTED_SUM );
 
    local j = inputs;
    for i = 1, #layers do

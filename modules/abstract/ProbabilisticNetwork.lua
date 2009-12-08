@@ -41,14 +41,17 @@ function create( inputs, layer1, layer2 )
    network.neurons = { {}, {} };
    network.activatorsCount = 0;
    network.activators = 0;
-   network.actFuncs = { createGaussianActFunc( 1.0 ), createLinearActFunc( 1.0, 0.0 ) };
+   network.actFuncs = { createActFunc( ACT_FUNC.GAUSSIAN, 1.0 ), createActFunc( ACT_FUNC.LINEAR, 1.0, 0.0 ) };
    network.buffersCount = 0;
    network.buffers = 0;
    network.connectorsCount = inputs + layer1 + layer2;
    network.connectors = createAbstractConnectors( network.connectorsCount );
    network.weightsCount = inputs * layer1 + layer1 * layer2;
    network.weights = createAbstractWeights( network.weightsCount );
-   network.processors = { createAbstractRadialBasisProcessor( 0 ), createAbstractWeightedSumProcessor() };
+   network.processors = {
+      createAbstractProcessor( ABSTRACT_PROCESSOR.RADIAL_BASIS, COEFF_USAGE.NOP ),
+      createAbstractProcessor( ABSTRACT_PROCESSOR.WEIGHTED_SUM )
+      };
 
    -- Create radial basis layer;
    local inputConnectors = {};

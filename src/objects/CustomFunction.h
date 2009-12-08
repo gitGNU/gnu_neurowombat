@@ -18,49 +18,35 @@
  ***************************************************************************/
 
 
-#ifndef SIMULATIONENGINE_H
-#define SIMULATIONENGINE_H
-
-
-#include <vector>
+#ifndef CUSTOMFUNCTION_H
+#define CUSTOMFUNCTION_H
 
 
 #include "kernel/KernelObject.h"
-#include "engine/InterruptManager.h"
 
 
 /***************************************************************************
- *   SimulationEngine class declaration                                    *
+ *   CustomFunction abstract class declaration                             *
  ***************************************************************************/
 
 
-class SimulationEngine : public KernelObject
+class CustomFunction : public KernelObject
    {
    public:
-      SimulationEngine();
-      virtual ~SimulationEngine();
+      CustomFunction( int index );
+      virtual ~CustomFunction();
 
-      void appendManager( InterruptManager * manager );
-      void insertManagerBefore( unsigned int index, InterruptManager * manager );
-      void deleteManager( unsigned int index );
-      void clear();
-      void restart();
+      void call() const;
+      double call( double x ) const;
 
-      bool stepOver();
-
-      double getCurrentTime();
-      double getFutureTime();
-      InterruptManager * getCurrentIntSource();
-      InterruptManager * getFutureIntSource();
+      int getFunctionReference() const;
 
    private:
-      // Most time-consuming operation;
-      InterruptManager * findOutIntSource();
+      CustomFunction();
+      CustomFunction( const CustomFunction & other );
+      CustomFunction & operator =( const CustomFunction & other );
 
-      std::vector< InterruptManager * > managers;
-      double currentTime;
-      InterruptManager * currentIntSource;
-      InterruptManager * futureIntSource;
+      int functionReference;
    };
 
 

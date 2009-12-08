@@ -28,8 +28,8 @@ MODULES_PATH=	$(CURDIR)/modules
 all:	bin/neurowombat
 
 
-bin/neurowombat:	build/main.o build/api.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractProcessor.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/ActivationFunction.o build/Destribution.o
-		${CC} -o $@ -ldl -lrt -l${LUA_LIB} build/main.o build/api.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractProcessor.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/ActivationFunction.o build/Destribution.o
+bin/neurowombat:	build/main.o build/api.o build/constants.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractProcessor.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/ActivationFunction.o build/Destribution.o build/OdeSystem.o build/OdeSystemSolver.o build/CustomFunction.o
+		${CC} -o $@ -ldl -lrt -l${LUA_LIB} build/main.o build/api.o build/constants.o build/Kernel.o build/KernelObject.o build/InterruptManager.o build/SimulationEngine.o build/AbstractActivators.o build/AbstractBuffers.o build/AbstractConnectors.o build/AbstractProcessor.o build/AbstractWeights.o build/AbstractNeuron.o build/AnalogComparators.o build/AnalogResistors.o build/AnalogWires.o build/AnalogNeuron.o build/ActivationFunction.o build/Destribution.o build/OdeSystem.o build/OdeSystemSolver.o build/CustomFunction.o
 
 
 build/main.o:	src/main.cpp src/kernel/Kernel.h
@@ -39,15 +39,19 @@ build/main.o:	src/main.cpp src/kernel/Kernel.h
 # api
 
 
-build/api.o:	src/api/api.cpp src/api/api.h src/kernel/Kernel.h src/components/abstract/AbstractActivators.h src/components/abstract/AbstractBuffers.h src/components/abstract/AbstractConnectors.h src/components/abstract/AbstractWeights.h src/neurons/abstract/AbstractNeuron.h src/components/analog/AnalogComparators.h src/components/analog/AnalogResistors.h src/components/analog/AnalogWires.h src/neurons/analog/AnalogNeuron.h src/engine/SimulationEngine.h src/math/Destribution.h src/math/ActivationFunction.h
+build/api.o:	src/api/api.cpp src/api/api.h src/api/constants.h src/kernel/Kernel.h src/components/abstract/AbstractActivators.h src/components/abstract/AbstractBuffers.h src/components/abstract/AbstractConnectors.h src/components/abstract/AbstractWeights.h src/neurons/abstract/AbstractNeuron.h src/components/analog/AnalogComparators.h src/components/analog/AnalogResistors.h src/components/analog/AnalogWires.h src/neurons/analog/AnalogNeuron.h src/engine/SimulationEngine.h src/math/Destribution.h src/math/ActivationFunction.h
 		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/api/api.cpp
 
 
-# coponents - abstract
+build/constants.o:	src/api/constants.cpp src/api/constants.h
+		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/api/constants.cpp
+
+
+# components - abstract
 
 
 build/AbstractActivators.o:	src/components/abstract/AbstractActivators.cpp src/components/abstract/AbstractActivators.h src/kernel/KernelObject.h src/math/ActivationFunction.h
-		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/components/abstract/AbstractActivators.cpp
+		${CC} -c -o $@ -Isrc src/components/abstract/AbstractActivators.cpp
 
 
 build/AbstractBuffers.o:	src/components/abstract/AbstractBuffers.cpp src/components/abstract/AbstractBuffers.h src/kernel/KernelObject.h src/engine/InterruptManager.h
@@ -70,7 +74,7 @@ build/AbstractWeights.o:	src/components/abstract/AbstractWeights.cpp src/compone
 		${CC} -c -o $@ -Isrc src/components/abstract/AbstractWeights.cpp
 
 
-# coponents - analog
+# components - analog
 
 
 build/AnalogComparators.o:	src/components/analog/AnalogComparators.cpp src/components/analog/AnalogComparators.h src/kernel/KernelObject.h
@@ -111,7 +115,7 @@ build/KernelObject.o:	src/kernel/KernelObject.cpp src/kernel/KernelObject.h
 
 
 build/AbstractNeuron.o:	src/neurons/abstract/AbstractNeuron.cpp src/neurons/abstract/AbstractNeuron.h src/components/abstract/AbstractActivators.h src/components/abstract/AbstractBuffers.h src/components/abstract/AbstractConnectors.h src/components/abstract/AbstractProcessor.h src/components/abstract/AbstractWeights.h src/kernel/KernelObject.h src/exceptions.h
-		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/neurons/abstract/AbstractNeuron.cpp
+		${CC} -c -o $@ -Isrc src/neurons/abstract/AbstractNeuron.cpp
 
 
 # neurons - analog
@@ -124,12 +128,27 @@ build/AnalogNeuron.o:	src/neurons/analog/AnalogNeuron.cpp src/neurons/analog/Ana
 # math
 
 
+build/ActivationFunction.o:	src/math/ActivationFunction.cpp src/math/ActivationFunction.h src/kernel/KernelObject.h src/objects/CustomFunction.h
+		${CC} -c -o $@ -Isrc src/math/ActivationFunction.cpp
+
+
 build/Destribution.o:	src/math/Destribution.cpp src/math/Destribution.h src/kernel/KernelObject.h
 		${CC} -c -o $@ -Isrc src/math/Destribution.cpp
 
 
-build/ActivationFunction.o:	src/math/ActivationFunction.cpp src/math/ActivationFunction.h src/kernel/KernelObject.h
-		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/math/ActivationFunction.cpp
+build/OdeSystem.o:	src/math/OdeSystem.cpp src/math/OdeSystem.h
+		${CC} -c -o $@ -Isrc src/math/OdeSystem.cpp
+
+
+build/OdeSystemSolver.o:	src/math/OdeSystemSolver.cpp src/math/OdeSystemSolver.h src/math/OdeSystem.h
+		${CC} -c -o $@ -Isrc src/math/OdeSystemSolver.cpp
+
+
+# objects
+
+
+build/CustomFunction.o:	src/objects/CustomFunction.cpp src/objects/CustomFunction.h src/kernel/KernelObject.h
+		${CC} -c -o $@ -Isrc -I${LUA_INCLUDE} src/objects/CustomFunction.cpp
 
 
 clean:

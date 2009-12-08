@@ -22,12 +22,48 @@
 #define ABSTRACTPROCESSOR_H
 
 
-#include <lua.hpp>
-
-
 #include "kernel/KernelObject.h"
+#include "objects/CustomFunction.h"
 #include "components/abstract/AbstractConnectors.h"
 #include "components/abstract/AbstractWeights.h"
+
+
+/***************************************************************************
+ *   T_ABSTRACT_PROCESSOR enum declaration                                 *
+ ***************************************************************************/
+
+namespace ABSTRACT_PROCESSOR
+   {
+   enum T_ABSTRACT_PROCESSOR
+      {
+      CUSTOM,
+      RADIAL_BASIS,
+      SCALAR,
+      WEIGHTED_SUM
+      };
+   };
+
+
+/***************************************************************************
+ *   T_COEFF_USAGE enum declaration                                        *
+ ***************************************************************************/
+
+namespace COEFF_USAGE
+   {
+   enum T_COEFF_USAGE
+      {
+      NOP,
+      ADD_TO,
+      MUL_BY,
+      SUB_IT_FROM,
+      SUB_FROM_IT,
+      DIV_IT_BY,
+      DIV_BY_IT
+      };
+   };
+
+
+inline double useCoefficient( COEFF_USAGE::T_COEFF_USAGE coeffUsage, double x, double c );
 
 
 /***************************************************************************
@@ -60,7 +96,7 @@ class AbstractProcessor : public KernelObject
 class AbstractCustomProcessor : public AbstractProcessor
    {
    public:
-      AbstractCustomProcessor( lua_State * L, int processRef, bool useMultiplier );
+      AbstractCustomProcessor( CustomFunction * processingFunc );
       virtual ~AbstractCustomProcessor();
 
       virtual double process(
@@ -73,9 +109,7 @@ class AbstractCustomProcessor : public AbstractProcessor
          );
 
    private:
-      lua_State * L;
-      int processRef;
-      bool useMultiplier;
+      CustomFunction * processingFunc;
    };
 
 
@@ -87,7 +121,7 @@ class AbstractCustomProcessor : public AbstractProcessor
 class AbstractRadialBasisProcessor : public AbstractProcessor
    {
    public:
-      AbstractRadialBasisProcessor( bool useMultiplier );
+      AbstractRadialBasisProcessor( COEFF_USAGE::T_COEFF_USAGE coeffUsage );
       virtual ~AbstractRadialBasisProcessor();
 
       virtual double process(
@@ -100,7 +134,7 @@ class AbstractRadialBasisProcessor : public AbstractProcessor
          );
 
    private:
-      bool useMultiplier;
+      COEFF_USAGE::T_COEFF_USAGE coeffUsage;
    };
 
 
