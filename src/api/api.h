@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -25,9 +25,6 @@
 #include <lua.hpp>
 
 
-#define API_VERSION "0.1"
-
-
 void registerApiFunctions( lua_State * L );
 
 
@@ -40,27 +37,12 @@ unsigned int readArray( lua_State * L, int index, unsigned int length, double * 
  ***************************************************************************/
 
 
-extern "C" int apiVersion( lua_State * L );
-
-
 extern "C" int closeId( lua_State * L );
-
-
-extern "C" int readArray( lua_State * L );
-
-
-extern "C" int trainAnalogHopfield( lua_State * L );
 
 
 /***************************************************************************
  *   Abstract neuron API functions declaration                             *
  ***************************************************************************/
-
-
-extern "C" int createAbstractActivators( lua_State * L );
-
-
-extern "C" int createAbstractBuffers( lua_State * L );
 
 
 extern "C" int createAbstractConnectors( lua_State * L );
@@ -70,9 +52,6 @@ extern "C" int getSignals( lua_State * L );
 
 
 extern "C" int setSignals( lua_State * L );
-
-
-extern "C" int createAbstractProcessor( lua_State * L );
 
 
 extern "C" int createAbstractWeights( lua_State * L );
@@ -99,6 +78,15 @@ extern "C" int trainBPAbstractNeurons( lua_State * L );
 /***************************************************************************
  *   Analog neuron API functions declaration                               *
  ***************************************************************************/
+
+
+extern "C" int createAnalogCapacitors( lua_State * L );
+
+
+extern "C" int getAnalogCapacitances( lua_State * L );
+
+
+extern "C" int setAnalogCapacitances( lua_State * L );
 
 
 extern "C" int createAnalogComparators( lua_State * L );
@@ -131,12 +119,53 @@ extern "C" int createAnalogNeuron( lua_State * L );
 extern "C" int computeAnalogNeurons( lua_State * L );
 
 
+extern "C" int computeAnalogLimNeuronsC( lua_State * L );
+
+
+/***************************************************************************
+ *   Digital neuron API functions declaration                              *
+ ***************************************************************************/
+
+
+extern "C" int createDigitalConnectors( lua_State * L );
+
+
+extern "C" int getValues( lua_State * L );
+
+
+extern "C" int setValues( lua_State * L );
+
+
+extern "C" int createMemoryModule( lua_State * L );
+
+
+extern "C" int getDigitalWeights( lua_State * L );
+
+
+extern "C" int setDigitalWeights( lua_State * L );
+
+
+extern "C" int createDigitalNeuron( lua_State * L );
+
+
+extern "C" int computeDigitalNeurons( lua_State * L );
+
+
+extern "C" int trainBPDigitalNeurons( lua_State * L );
+
+
 /***************************************************************************
  *   Math API functions declaration                                        *
  ***************************************************************************/
 
 
 extern "C" int createActFunc( lua_State * L );
+
+
+extern "C" int createProcUnit( lua_State * L );
+
+
+extern "C" int createDistribution( lua_State * L );
 
 
 extern "C" int calcMeanCI( lua_State * L );
@@ -150,16 +179,7 @@ extern "C" int calcACProbabilityCI( lua_State * L );
  ***************************************************************************/
 
 
-extern "C" int createExponentialDestribution( lua_State * L );
-
-
-extern "C" int createWeibullDestribution( lua_State * L );
-
-
-extern "C" int createAbstractWeightsManager( lua_State * L );
-
-
-extern "C" int createAnalogResistorsManager( lua_State * L );
+extern "C" int createInterruptManager( lua_State * L );
 
 
 extern "C" int createSimulationEngine( lua_State * L );

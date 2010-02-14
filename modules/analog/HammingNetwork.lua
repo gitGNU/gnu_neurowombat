@@ -1,4 +1,4 @@
---   Copyright (C) 2009 Andrew Timashov
+--   Copyright (C) 2009, 2010 Andrew Timashov
 --
 --   This file is part of NeuroWombat.
 --
@@ -24,6 +24,8 @@ function create( inputs, neuronsPerLayer )
    network.inputs = inputs;
    network.neuronsCount = neuronsPerLayer * 2;
    network.neurons = { {}, {} };
+   network.capacitorsCount = neuronsPerLayer + 2 * neuronsPerLayer;
+   network.capacitors = createAnalogCapacitors( network.capacitorsCount );
    network.comparatorsCount = neuronsPerLayer;
    network.comparators = createAnalogComparators( network.comparatorsCount );
    network.resistorsCount = inputs * neuronsPerLayer + 2 * neuronsPerLayer * neuronsPerLayer;
@@ -33,6 +35,11 @@ function create( inputs, neuronsPerLayer )
 
    -- Set potentials for src and gnd wires;
    setPotentials( network.wires, 0, { 0.0, 1.0 } );
+
+   -- Set capacitances for network capacitors;
+   local capacitances = {};
+   for i = 1, network.capacitorsCount do capacitances[ i ] = 1.0 end
+   setAnalogCapacitances( network.capacitors, 0, capacitances );
 
    local hmInputWires = {};
    for j = 0, inputs - 1 do
@@ -49,6 +56,7 @@ function create( inputs, neuronsPerLayer )
          inputs,
          hmInputWires,
          0, 1,
+         network.capacitors, i,
          0, 0,
          network.resistors, inputs * i,
          network.wires, 2 + inputs + i
@@ -58,6 +66,7 @@ function create( inputs, neuronsPerLayer )
          neuronsPerLayer,
          hpInputWires,
          0, 1,
+         network.capacitors, neuronsPerLayer + i * 2,
          network.comparators, i,
          network.resistors, inputs * neuronsPerLayer + neuronsPerLayer * i * 2,
          network.wires, 2 + inputs + i
@@ -78,6 +87,7 @@ function destroy( network )
    closeId( network.wires );
    closeId( network.resistors );
    closeId( network.comparators );
+   closeId( network.capacitors );
    end;
 
 
@@ -104,10 +114,10 @@ function train( network, vectors )
    end
 
 
-function compute( network, x, times )
+function computeC( network, x, time, stepsCount )
    setPotentials( network.wires, 2, x );
    computeAnalogNeurons( network.neurons[ 1 ], 1 );
-   computeAnalogNeurons( network.neurons[ 2 ], times );
+   computeAnalogLimNeuronsC( network.neurons[ 2 ], time, stepsCount );
    return getPotentials( network.wires, 2 + network.inputs, #network.neurons[ 2 ] );
    end
 

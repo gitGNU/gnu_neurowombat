@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -23,9 +23,10 @@
 
 
 #include "kernel/KernelObject.h"
+#include "components/analog/AnalogCapacitors.h"
 #include "components/analog/AnalogComparators.h"
-#include "components/analog/AnalogWires.h"
 #include "components/analog/AnalogResistors.h"
+#include "components/analog/AnalogWires.h"
 
 
 /***************************************************************************
@@ -41,6 +42,8 @@ class AnalogNeuron : public KernelObject
          unsigned int * inputWires = NULL,
          unsigned int gndWireIndex = 0,
          unsigned int srcWireIndex = 0,
+         AnalogCapacitors * capacitors = NULL,
+         unsigned int capacitorsBaseIndex = 0,
          AnalogComparators * comparators = NULL,
          unsigned int comparatorsBaseIndex = 0,
          AnalogResistors * resistors = NULL,
@@ -54,14 +57,24 @@ class AnalogNeuron : public KernelObject
       unsigned int getNumInputs() const;
       unsigned int getResistorsBaseIndex() const;
 
+      double getPosConstant();
+      double getNegConstant();
+      double leftComputePos();
+      double leftComputeNeg();
+      void rightCompute( double negPotential, double posPotential );
       void compute();
 
    private:
+      double calcPotencial( unsigned int capacitorsBaseIndex, unsigned int resistorsBaseIndex );
+
       unsigned int numInputs;
       unsigned int * inputWires;
 
       unsigned int gndWireIndex;
       unsigned int srcWireIndex;
+
+      AnalogCapacitors * capacitors;
+      unsigned int capacitorsBaseIndex;
 
       AnalogComparators * comparators;
       unsigned int comparatorsBaseIndex;

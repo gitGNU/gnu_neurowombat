@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -28,21 +28,22 @@
 
 
 #include "kernel/Kernel.h"
-#include "components/abstract/AbstractActivators.h"
-#include "components/abstract/AbstractBuffers.h"
 #include "components/abstract/AbstractConnectors.h"
-#include "components/abstract/AbstractProcessor.h"
 #include "components/abstract/AbstractWeights.h"
 #include "neurons/abstract/AbstractNeuron.h"
+#include "components/analog/AnalogCapacitors.h"
 #include "components/analog/AnalogComparators.h"
 #include "components/analog/AnalogResistors.h"
 #include "components/analog/AnalogWires.h"
 #include "neurons/analog/AnalogNeuron.h"
+#include "components/digital/DigitalConnectors.h"
+#include "components/digital/MemoryModule.h"
+#include "neurons/digital/DigitalNeuron.h"
 #include "engine/SimulationEngine.h"
 #include "math/ActivationFunction.h"
-#include "math/Destribution.h"
+#include "math/Distribution.h"
 #include "math/OdeSystemSolver.h"
-
+#include "math/ProcessingUnit.h"
 
 
 // It is better for API functions to use this pointer instead of
@@ -72,16 +73,11 @@ extern Kernel * kernel;
 void registerApiFunctions( lua_State * L )
    {
    // Register common API functions;
-   lua_register( L, "apiVersion", apiVersion );
    lua_register( L, "closeId", closeId );
-   lua_register( L, "readArray", readArray );
    // Register abstract neuron API functions;
-   lua_register( L, "createAbstractActivators", createAbstractActivators );
-   lua_register( L, "createAbstractBuffers", createAbstractBuffers );
    lua_register( L, "createAbstractConnectors", createAbstractConnectors );
    lua_register( L, "getSignals", getSignals );
    lua_register( L, "setSignals", setSignals );
-   lua_register( L, "createAbstractProcessor", createAbstractProcessor );
    lua_register( L, "createAbstractWeights", createAbstractWeights );
    lua_register( L, "getAbstractWeights", getAbstractWeights );
    lua_register( L, "setAbstractWeights", setAbstractWeights );
@@ -90,6 +86,9 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "computeAbstractNeuronsC", computeAbstractNeuronsC );
    lua_register( L, "trainBPAbstractNeurons", trainBPAbstractNeurons );
    // Register analog neuron API functions;
+   lua_register( L, "createAnalogCapacitors", createAnalogCapacitors );
+   lua_register( L, "getAnalogCapacitances", getAnalogCapacitances );
+   lua_register( L, "setAnalogCapacitances", setAnalogCapacitances );
    lua_register( L, "createAnalogComparators", createAnalogComparators );
    lua_register( L, "createAnalogResistors", createAnalogResistors );
    lua_register( L, "setupAnalogResistors", setupAnalogResistors );
@@ -100,15 +99,25 @@ void registerApiFunctions( lua_State * L )
    lua_register( L, "setPotentials", setPotentials );
    lua_register( L, "createAnalogNeuron", createAnalogNeuron );
    lua_register( L, "computeAnalogNeurons", computeAnalogNeurons );
+   lua_register( L, "computeAnalogLimNeuronsC", computeAnalogLimNeuronsC );
+   // Register digital neuron API functions;
+   lua_register( L, "createDigitalConnectors", createDigitalConnectors );
+   lua_register( L, "getValues", getValues );
+   lua_register( L, "setValues", setValues );
+   lua_register( L, "createMemoryModule", createMemoryModule );
+   lua_register( L, "getDigitalWeights", getDigitalWeights );
+   lua_register( L, "setDigitalWeights", setDigitalWeights );
+   lua_register( L, "createDigitalNeuron", createDigitalNeuron );
+   lua_register( L, "computeDigitalNeurons", computeDigitalNeurons );
+   lua_register( L, "trainBPDigitalNeurons", trainBPDigitalNeurons );
    // Math API functions;
    lua_register( L, "createActFunc", createActFunc );
+   lua_register( L, "createProcUnit", createProcUnit );
+   lua_register( L, "createDistribution", createDistribution );
    lua_register( L, "calcMeanCI", calcMeanCI );
    lua_register( L, "calcACProbabilityCI", calcACProbabilityCI );
    // Simulation engine API functions;
-   lua_register( L, "createExponentialDestribution", createExponentialDestribution );
-   lua_register( L, "createWeibullDestribution", createWeibullDestribution );
-   lua_register( L, "createAbstractWeightsManager", createAbstractWeightsManager );
-   lua_register( L, "createAnalogResistorsManager", createAnalogResistorsManager );
+   lua_register( L, "createInterruptManager", createInterruptManager );
    lua_register( L, "createSimulationEngine", createSimulationEngine );
    lua_register( L, "appendInterruptManager", appendInterruptManager );
    lua_register( L, "getIntSourcesCount", getIntSourcesCount );
@@ -174,13 +183,6 @@ unsigned int readArray( lua_State * L, int index, unsigned int length, double * 
  ***************************************************************************/
 
 
-int apiVersion( lua_State * L )
-   {
-   lua_pushstring( L, API_VERSION );
-   return 1;
-   };
-
-
 int closeId( lua_State * L )
    {
    kernel->deleteObject( luaL_checknumber( L, 1 ) );
@@ -188,70 +190,9 @@ int closeId( lua_State * L )
    };
 
 
-int readArray( lua_State * L )
-   {
-   printf( "len = %i\n", lua_gettop( L ) );
-   lua_pushnil( L );  /* first key */
-   while ( lua_next( L, 1 ) != 0 )
-      {
-      /* uses 'key' ( at index -2 ) and 'value' ( at index -1 ) */
-      printf( "arr[ %i ] = %i\n",
-         ( int ) lua_tonumber( L, -2 ),
-         ( int ) lua_tonumber( L, -1 )
-         );
-
-      /* removes 'value'; keeps 'key' for next iteration */
-      lua_pop( L, 1 );
-      }
-
-   //lua_pop( L, 2 );
-
-   //printf( "len = %i\n", lua_getn( L, -1 ) );
-   return 0;
-   };
-
-
 /***************************************************************************
  *   Abstract neuron API functions implementation                          *
  ***************************************************************************/
-
-
-int createAbstractActivators( lua_State * L )
-   {
-   KernelObjectId id = 0;
-
-   unsigned int count = luaL_checkinteger( L, 1 );
-
-   // Read activationFunction argument;
-   id = luaL_checkinteger( L, 2 );
-   KernelObject * object = kernel->getObject( id );
-   ActivationFunction * activationFunction = dynamic_cast < ActivationFunction * >( object );
-
-   if ( count > 0 && activationFunction != NULL )
-      {
-      AbstractActivators * activators = new AbstractActivators( count, activationFunction );
-      id = kernel->insertObject( activators );
-      }
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createAbstractBuffers( lua_State * L )
-   {
-   KernelObjectId id = 0;
-
-   unsigned int count = luaL_checkinteger( L, 1 );
-   if ( count > 0 )
-      {
-      AbstractBuffers * buffers = new AbstractBuffers( count );
-      id = kernel->insertObject( buffers );
-      }
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
 
 
 int createAbstractConnectors( lua_State * L )
@@ -289,7 +230,7 @@ int getSignals( lua_State * L )
       {
       // Increase key by 1 to provide compatibility between C and Lua-style arrays;
       lua_pushnumber( L, i + 1 );
-      lua_pushnumber( L, connectors->getSignal( baseIndex + i ) );
+      lua_pushnumber( L, connectors->at( baseIndex + i ) );
       lua_rawset( L, -3 );
       }
 
@@ -315,56 +256,11 @@ int setSignals( lua_State * L )
       // Read key and decrease it by 1 to provide compatibility
       // between C and Lua-style arrays;
       unsigned int index = baseIndex + lua_tointeger( L, -2 ) - 1;
-      if ( index < limit ) connectors->setSignal( index, lua_tonumber( L, -1 ) );
+      if ( index < limit ) connectors->at( index ) = lua_tonumber( L, -1 );
       lua_pop( L, 1 );
       }
 
    return 0;
-   };
-
-
-int createAbstractProcessor( lua_State * L )
-   {
-   KernelObjectId id = 0;
-
-   // Read processor argument;
-   int processor = luaL_checknumber( L, 1 );
-
-   switch ( processor )
-      {
-      case ABSTRACT_PROCESSOR::CUSTOM:
-         {
-         // Read luaFunction argument;
-         CustomFunction * luaFunction = new CustomFunction( 2 );
-
-         id = kernel->insertObject( new AbstractCustomProcessor( luaFunction ) );
-         break;
-         }
-      case ABSTRACT_PROCESSOR::RADIAL_BASIS:
-         {
-         // Read coeffUsage argument;
-         COEFF_USAGE::T_COEFF_USAGE coeffUsage = ( COEFF_USAGE::T_COEFF_USAGE ) luaL_checknumber( L, 2 );
-
-         id = kernel->insertObject( new AbstractRadialBasisProcessor( coeffUsage ) );
-         break;
-         }
-      case ABSTRACT_PROCESSOR::SCALAR:
-         {
-         id = kernel->insertObject( new AbstractScalarProcessor() );
-         break;
-         }
-      case ABSTRACT_PROCESSOR::WEIGHTED_SUM:
-         {
-         id = kernel->insertObject( new AbstractWeightedSumProcessor() );
-         break;
-         }
-      default:
-         // Do nothing;
-         break;
-      }
-
-   lua_pushnumber( L, id );
-   return 1;
    };
 
 
@@ -419,7 +315,7 @@ int getAbstractWeights( lua_State * L )
          {
          // Increase key by 1 to provide compatibility between C and Lua-style arrays;
          lua_pushnumber( L, i + 1 );
-         lua_pushnumber( L, weights->getWeight( baseIndex + i ) );
+         lua_pushnumber( L, weights->at( baseIndex + i ) );
          lua_rawset( L, -3 );
          }
       }
@@ -464,7 +360,7 @@ int setAbstractWeights( lua_State * L )
          // Read key and decrease it by 1 to provide compatibility
          // between C and Lua-style arrays;
          unsigned int index = baseIndex + lua_tointeger( L, -2 ) - 1;
-         if ( index < limit ) weights->setWeight( index, lua_tonumber( L, -1 ) );
+         if ( index < limit ) weights->at( index ) = lua_tonumber( L, -1 );
          lua_pop( L, 1 );
          }
       }
@@ -504,53 +400,24 @@ int createAbstractNeuron( lua_State * L )
    // Read weightsBaseIndex argument;
    unsigned int weightsBaseIndex = luaL_checkinteger( L, 6 );
 
-   // Read buffers argument;
-   KernelObjectId buffersId = luaL_checkinteger( L, 7 );
-   object = kernel->getObject( buffersId );
-   AbstractBuffers * buffers = dynamic_cast < AbstractBuffers * >( object );
-
-   // Read buffersBaseIndex argument;
-   unsigned int buffersBaseIndex = luaL_checkinteger( L, 8 );
-
-   // Read processor argument;
-   KernelObjectId processorId = luaL_checkinteger( L, 9 );
-   object = kernel->getObject( processorId );
-   AbstractProcessor * processor = dynamic_cast < AbstractProcessor * >( object );
+   // Read processingUnit argument;
+   KernelObjectId processingUnitId = luaL_checkinteger( L, 7 );
+   object = kernel->getObject( processingUnitId );
+   ProcessingUnit * processingUnit = dynamic_cast < ProcessingUnit * >( object );
 
    // Read activationFunction argument;
-   KernelObjectId activationFunctionId = luaL_checkinteger( L, 10 );
+   KernelObjectId activationFunctionId = luaL_checkinteger( L, 8 );
    object = kernel->getObject( activationFunctionId );
    ActivationFunction * activationFunction = dynamic_cast < ActivationFunction * >( object );
 
    // Create abstract neuron;
-   AbstractNeuron * neuron = NULL;
-   if ( activationFunction != NULL )
-      {
-      neuron = new AbstractNeuron(
-         inputsCount, inputConnectors,
-         connectors, connectorsBaseIndex,
-         weights, weightsBaseIndex,
-         buffers, buffersBaseIndex,
-         processor,
-         activationFunction
-         );
-      }
-   else
-      {
-      AbstractActivators * activators = dynamic_cast < AbstractActivators * >( object );
-
-      // Read activatorsBaseIndex argument;
-      unsigned int activatorsBaseIndex = luaL_checkinteger( L, 11 );
-
-      neuron = new AbstractNeuron(
-         inputsCount, inputConnectors,
-         connectors, connectorsBaseIndex,
-         weights, weightsBaseIndex,
-         buffers, buffersBaseIndex,
-         processor,
-         activators, activatorsBaseIndex
-         );
-      }
+   AbstractNeuron * neuron = new AbstractNeuron(
+      inputsCount, inputConnectors,
+      connectors, connectorsBaseIndex,
+      weights, weightsBaseIndex,
+      processingUnit,
+      activationFunction
+      );
 
    KernelObjectId id = kernel->insertObject( neuron );
 
@@ -694,6 +561,75 @@ int trainBPAbstractNeurons( lua_State * L )
  ***************************************************************************/
 
 
+int createAnalogCapacitors( lua_State * L )
+   {
+   KernelObjectId id = 0;
+
+   unsigned int count = luaL_checkinteger( L, 1 );
+   if ( count > 0 )
+      {
+      AnalogCapacitors * capacitors = new AnalogCapacitors( count );
+      id = kernel->insertObject( capacitors );
+      }
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
+int getAnalogCapacitances( lua_State * L )
+   {
+   // Read capacitors argument;
+   KernelObjectId resistorsId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( resistorsId );
+   AnalogCapacitors * capacitors = dynamic_cast < AnalogCapacitors * >( object );
+
+   // Read baseIndex argument;
+   unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+   // Read count argument;
+   unsigned int count = luaL_checkinteger( L, 3 );
+
+   // Create table;
+   lua_newtable( L );
+   for ( unsigned int i = 0; i < count; i ++ )
+      {
+      // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+      lua_pushnumber( L, i + 1 );
+      lua_pushnumber( L, capacitors->at( baseIndex + i ) );
+      lua_rawset( L, -3 );
+      }
+
+   return 1;
+   };
+
+
+int setAnalogCapacitances( lua_State * L )
+   {
+   // Read capacitors argument;
+   KernelObjectId resistorsId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( resistorsId );
+   AnalogCapacitors * capacitors = dynamic_cast < AnalogCapacitors * >( object );
+
+   // Read baseIndex argument;
+   unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+   // Read capacitances argument;
+   unsigned int limit = capacitors->count();
+   lua_pushnil( L );
+   while ( lua_next( L, 3 ) != 0 )
+      {
+      // Read key and decrease it by 1 to provide compatibility
+      // between C and Lua-style arrays;
+      unsigned int index = baseIndex + lua_tointeger( L, -2 ) - 1;
+      if ( index < limit ) capacitors->at( index ) = lua_tonumber( L, -1 );
+      lua_pop( L, 1 );
+      }
+
+   return 0;
+   };
+
+
 int createAnalogComparators( lua_State * L )
    {
    KernelObjectId id = 0;
@@ -782,7 +718,7 @@ int setupAnalogResistors( lua_State * L )
       // Set resistances;
       for ( unsigned int k = 0; k < numCopies; k ++ )
          {
-         resistors->setResistance( baseIndex + count * k + j, resistance );
+         resistors->at( baseIndex + count * k + j ) = resistance;
          }
       }
 
@@ -811,7 +747,7 @@ int getAnalogResistances( lua_State * L )
       {
       // Increase key by 1 to provide compatibility between C and Lua-style arrays;
       lua_pushnumber( L, i + 1 );
-      lua_pushnumber( L, resistors->getResistance( baseIndex + i ) );
+      lua_pushnumber( L, resistors->at( baseIndex + i ) );
       lua_rawset( L, -3 );
       }
 
@@ -829,7 +765,7 @@ int setAnalogResistances( lua_State * L )
    // Read baseIndex argument;
    unsigned int baseIndex = luaL_checkinteger( L, 2 );
 
-   // Read weights argument;
+   // Read resistances argument;
    unsigned int limit = resistors->count();
    lua_pushnil( L );
    while ( lua_next( L, 3 ) != 0 )
@@ -837,7 +773,7 @@ int setAnalogResistances( lua_State * L )
       // Read key and decrease it by 1 to provide compatibility
       // between C and Lua-style arrays;
       unsigned int index = baseIndex + lua_tointeger( L, -2 ) - 1;
-      if ( index < limit ) resistors->setResistance( index, lua_tonumber( L, -1 ) );
+      if ( index < limit ) resistors->at( index ) = lua_tonumber( L, -1 );
       lua_pop( L, 1 );
       }
 
@@ -880,7 +816,7 @@ int getPotentials( lua_State * L )
       {
       // Increase key by 1 to provide compatibility between C and Lua-style arrays;
       lua_pushnumber( L, i + 1 );
-      lua_pushnumber( L, wires->getPotential( baseIndex + i ) );
+      lua_pushnumber( L, wires->at( baseIndex + i ) );
       lua_rawset( L, -3 );
       }
 
@@ -906,7 +842,7 @@ int setPotentials( lua_State * L )
       // Read key and decrease it by 1 to provide compatibility
       // between C and Lua-style arrays;
       unsigned int index = baseIndex + lua_tointeger( L, -2 ) - 1;
-      if ( index < limit ) wires->setPotential( index, lua_tonumber( L, -1 ) );
+      if ( index < limit ) wires->at( index ) = lua_tonumber( L, -1 );
       lua_pop( L, 1 );
       }
 
@@ -936,29 +872,37 @@ int createAnalogNeuron( lua_State * L )
    // Read srcWireIndex argument;
    unsigned int srcWireIndex = luaL_checkinteger( L, 4 );
 
+   // Read capacitors argument;
+   KernelObjectId capacitorsId = luaL_checkinteger( L, 5 );
+   object = kernel->getObject( capacitorsId );
+   AnalogCapacitors * capacitors = dynamic_cast < AnalogCapacitors * >( object );
+
+   // Read capacitorsBaseIndex argument;
+   unsigned int capacitorsBaseIndex = luaL_checkinteger( L, 6 );
+
    // Read comparators argument;
-   KernelObjectId comparatorsId = luaL_checkinteger( L, 5 );
+   KernelObjectId comparatorsId = luaL_checkinteger( L, 7 );
    object = kernel->getObject( comparatorsId );
    AnalogComparators * comparators = dynamic_cast < AnalogComparators * >( object );
 
    // Read comparatorsBaseIndex argument;
-   unsigned int comparatorsBaseIndex = luaL_checkinteger( L, 6 );
+   unsigned int comparatorsBaseIndex = luaL_checkinteger( L, 8 );
 
    // Read resistors argument;
-   KernelObjectId resistorsId = luaL_checkinteger( L, 7 );
+   KernelObjectId resistorsId = luaL_checkinteger( L, 9 );
    object = kernel->getObject( resistorsId );
    AnalogResistors * resistors = dynamic_cast < AnalogResistors * >( object );
 
    // Read resistorsBaseIndex argument;
-   unsigned int resistorsBaseIndex = luaL_checkinteger( L, 8 );
+   unsigned int resistorsBaseIndex = luaL_checkinteger( L, 10 );
 
    // Read wires argument;
-   KernelObjectId wiresId = luaL_checkinteger( L, 9 );
+   KernelObjectId wiresId = luaL_checkinteger( L, 11 );
    object = kernel->getObject( wiresId );
    AnalogWires * wires = dynamic_cast < AnalogWires * >( object );
 
    // Read wiresBaseIndex argument;
-   unsigned int wiresBaseIndex = luaL_checkinteger( L, 10 );
+   unsigned int wiresBaseIndex = luaL_checkinteger( L, 12 );
 
    // Create AnalogNeuron;
    AnalogNeuron * neuron = new AnalogNeuron(
@@ -966,6 +910,8 @@ int createAnalogNeuron( lua_State * L )
       inputWires,
       gndWireIndex,
       srcWireIndex,
+      capacitors,
+      capacitorsBaseIndex,
       comparators,
       comparatorsBaseIndex,
       resistors,
@@ -1008,6 +954,369 @@ int computeAnalogNeurons( lua_State * L )
    };
 
 
+int computeAnalogLimNeuronsC( lua_State * L )
+   {
+   // Create vector for holding AnalogNeuron pointers;
+   std::vector < AnalogNeuron * > neurons;
+
+   // Read neurons argument;
+   _readKernelObjectsVector( L, 1, AnalogNeuron *, neurons );
+
+   // Read time argument;
+   double time = luaL_checkinteger( L, 2 );
+
+   // Read stepsCount argument;
+   unsigned int stepsCount = luaL_checkinteger( L, 3 );
+
+   // Solve AnalogLimNeuronsOdeSystem;
+   AnalogLimNeuronsOdeSystem odeSystem( & neurons );
+   OdeSystemSolver::solve( odeSystem, 0, time, stepsCount );
+
+   return 0;
+   };
+
+
+/***************************************************************************
+ *   Digital neuron API functions implementation                           *
+ ***************************************************************************/
+
+
+int createDigitalConnectors( lua_State * L )
+   {
+   KernelObjectId id = 0;
+
+   unsigned int count = luaL_checkinteger( L, 1 );
+   if ( count > 0 )
+      {
+      DigitalConnectors * connectors = new DigitalConnectors( count );
+      id = kernel->insertObject( connectors );
+      }
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
+int getValues( lua_State * L )
+   {
+   // Read connectors argument;
+   KernelObjectId connectorsId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( connectorsId );
+   DigitalConnectors * connectors = dynamic_cast < DigitalConnectors * >( object );
+
+   // Read baseIndex argument;
+   unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+   // Read count argument;
+   unsigned int count = luaL_checkinteger( L, 3 );
+
+   // Create table;
+   lua_newtable( L );
+   for ( unsigned int i = 0; i < count; i ++ )
+      {
+      // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+      lua_pushnumber( L, i + 1 );
+      lua_pushnumber( L, connectors->at( baseIndex + i ) );
+      lua_rawset( L, -3 );
+      }
+
+   return 1;
+   };
+
+
+int setValues( lua_State * L )
+   {
+   // Read connectors argument;
+   KernelObjectId connectorsId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( connectorsId );
+   DigitalConnectors * connectors = dynamic_cast < DigitalConnectors * >( object );
+
+   // Read baseIndex argument;
+   unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+   // Read signals argument;
+   unsigned int limit = connectors->count();
+   lua_pushnil( L );
+   while ( lua_next( L, 3 ) != 0 )
+      {
+      // Read key and decrease it by 1 to provide compatibility
+      // between C and Lua-style arrays;
+      unsigned int index = baseIndex + lua_tointeger( L, -2 ) - 1;
+      if ( index < limit ) connectors->at( index ) = lua_tonumber( L, -1 );
+      lua_pop( L, 1 );
+      }
+
+   return 0;
+   };
+
+
+int createMemoryModule( lua_State * L )
+   {
+   KernelObjectId id = 0;
+
+   unsigned int count = luaL_checkinteger( L, 1 );
+   if ( count > 0 )
+      {
+      MemoryModule * memory = new MemoryModule( count );
+      id = kernel->insertObject( memory );
+      }
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
+int getDigitalWeights( lua_State * L )
+   {
+   // Read neuron argument;
+   KernelObjectId neuronId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( neuronId );
+   DigitalNeuron * neuron = dynamic_cast < DigitalNeuron * >( object );
+
+   if ( neuron != NULL )
+      {
+      // Create table;
+      lua_newtable( L );
+      for ( unsigned int i = 0; i < neuron->getInputsCount(); i ++ )
+         {
+         // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+         lua_pushnumber( L, i + 1 );
+         lua_pushnumber( L, neuron->getWeight( i ) );
+         lua_rawset( L, -3 );
+         }
+      }
+   else
+      {
+      MemoryModule * memory = dynamic_cast < MemoryModule * >( object );
+
+      // Read baseIndex argument;
+      unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+      // Read count argument;
+      unsigned int count = luaL_checkinteger( L, 3 );
+
+      // Create table;
+      lua_newtable( L );
+      for ( unsigned int i = 0; i < count; i ++ )
+         {
+         // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+         lua_pushnumber( L, i + 1 );
+         lua_pushnumber( L, memory->at( baseIndex + i ) );
+         lua_rawset( L, -3 );
+         }
+      }
+
+   return 1;
+   };
+
+
+int setDigitalWeights( lua_State * L )
+   {
+   // Read neuron argument;
+   KernelObjectId neuronId = luaL_checkinteger( L, 1 );
+   KernelObject * object = kernel->getObject( neuronId );
+   DigitalNeuron * neuron = dynamic_cast < DigitalNeuron * >( object );
+
+   if ( neuron != NULL )
+      {
+      // Read weights argument;
+      unsigned int limit = neuron->getInputsCount();
+      lua_pushnil( L );
+      while ( lua_next( L, 2 ) != 0 )
+         {
+         // Read key and decrease it by 1 to provide compatibility
+         // between C and Lua-style arrays;
+         unsigned int index = lua_tointeger( L, -2 ) - 1;
+         if ( index < limit ) neuron->setWeight( index, lua_tonumber( L, -1 ) );
+         lua_pop( L, 1 );
+         }
+      }
+   else
+      {
+      MemoryModule * memory = dynamic_cast < MemoryModule * >( object );
+
+      // Read baseIndex argument;
+      unsigned int baseIndex = luaL_checkinteger( L, 2 );
+
+      // Read weights argument;
+      unsigned int limit = memory->count();
+      lua_pushnil( L );
+      while ( lua_next( L, 3 ) != 0 )
+         {
+         // Read key and decrease it by 1 to provide compatibility
+         // between C and Lua-style arrays;
+         unsigned int index = baseIndex + lua_tointeger( L, -2 ) - 1;
+         if ( index < limit ) memory->at( index ) = lua_tonumber( L, -1 );
+         lua_pop( L, 1 );
+         }
+      }
+
+   return 0;
+   };
+
+
+int createDigitalNeuron( lua_State * L )
+   {
+   KernelObject * object = NULL;
+
+   // Read inputsCount argument;
+   unsigned int inputsCount = luaL_checkinteger( L, 1 );
+
+   // Read inputConnectors argument;
+   unsigned int * inputConnectors = NULL;
+   if ( inputsCount > 0 )
+      {
+      inputConnectors = new unsigned int[ inputsCount ];
+      readArray( L, 2, inputsCount, inputConnectors );
+      }
+
+   // Read connectors argument;
+   KernelObjectId connectorsId = luaL_checkinteger( L, 3 );
+   object = kernel->getObject( connectorsId );
+   DigitalConnectors * connectors = dynamic_cast < DigitalConnectors * >( object );
+
+   // Read connectorsBaseIndex argument;
+   unsigned int connectorsBaseIndex = luaL_checkinteger( L, 4 );
+
+   // Read memory argument;
+   KernelObjectId weightsId = luaL_checkinteger( L, 5 );
+   object = kernel->getObject( weightsId );
+   MemoryModule * memory = dynamic_cast < MemoryModule * >( object );
+
+   // Read memoryBaseIndex argument;
+   unsigned int memoryBaseIndex = luaL_checkinteger( L, 6 );
+
+   // Read processingUnit argument;
+   KernelObjectId processingUnitId = luaL_checkinteger( L, 7 );
+   object = kernel->getObject( processingUnitId );
+   ProcessingUnit * processingUnit = dynamic_cast < ProcessingUnit * >( object );
+
+   // Read activationFunction argument;
+   KernelObjectId activationFunctionId = luaL_checkinteger( L, 8 );
+   object = kernel->getObject( activationFunctionId );
+   ActivationFunction * activationFunction = dynamic_cast < ActivationFunction * >( object );
+
+   // Create digital neuron;
+   DigitalNeuron * neuron = new DigitalNeuron(
+      inputsCount, inputConnectors,
+      connectors, connectorsBaseIndex,
+      memory, memoryBaseIndex,
+      processingUnit,
+      activationFunction
+      );
+
+   KernelObjectId id = kernel->insertObject( neuron );
+
+   // Free inputConnectors;
+   if ( inputConnectors != NULL ) delete[] inputConnectors;
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
+int computeDigitalNeurons( lua_State * L )
+   {
+   // Create vector for holding DigitalNeuron pointers;
+   std::vector < DigitalNeuron * > neurons;
+
+   // Read neurons argument;
+   _readKernelObjectsVector( L, 1, DigitalNeuron *, neurons );
+
+   // Read times argument;
+   unsigned int times = luaL_checkinteger( L, 2 );
+
+   // Calculate neurons;
+   for ( unsigned int i = 0; i < times; i ++ )
+      {
+      for ( unsigned int j = 0; j < neurons.size(); j ++ )
+         {
+         if ( neurons[ j ] != NULL ) neurons[ j ]->compute();
+         }
+      }
+
+   return 0;
+   };
+
+
+int trainBPDigitalNeurons( lua_State * L )
+   {
+   // Create vector for holding DigitalNeuron pointers;
+   std::vector < DigitalNeuron * > neurons;
+
+   // Read neurons argument;
+   _readKernelObjectsVector( L, 1, DigitalNeuron *, neurons );
+
+   // Create vector for holding neurons per layer count;
+   std::vector < unsigned int > layers;
+
+   // Read layers argument;
+   _readIntegersVector( L, 2, layers );
+
+   // Create array for holding target;
+   unsigned int targetLength = layers[ layers.size() - 1 ];
+   double * target = new double[ targetLength ];
+
+   // Read target argument;
+   readArray( L, 3, targetLength, target );
+
+   // Read damping argument;
+   double damping = luaL_checknumber( L, 4 );
+
+   // Read speed argument;
+   double speed = luaL_checknumber( L, 5 );
+
+   // Calculate neurons;
+   unsigned int neuronsCount = neurons.size();
+   for ( unsigned int i = 0; i < neuronsCount; i ++ )
+      {
+      neurons[ i ]->compute();
+      }
+
+   // Snap deltas for output layer;
+   for ( unsigned int i = 0; i < targetLength; i ++ )
+      {
+      neurons[ neuronsCount - 1 - i ]->snapDelta(
+         target[ i ] - neurons[ neuronsCount - 1 - i ]->getOutput()
+         );
+      }
+
+   // Free target;
+   delete[] target;
+
+   // Snap deltas for the rest layers;
+   unsigned int index = neuronsCount - targetLength - 1;
+   unsigned int prevIndex = neuronsCount - 1;
+   for ( int i = layers.size() - 2; i >= 0 ; i -- )
+      {
+      for ( int j = layers[ i ] - 1; j >= 0; j -- )
+         {
+         // Calculate error;
+         double err = 0.0;
+         for ( int k = layers[ i + 1 ] - 1; k >= 0; k -- )
+            {
+            err += neurons[ prevIndex - k ]->getWeightedDelta( j );
+            }
+
+         neurons[ index ]->snapDelta( err );
+         index --;
+         }
+
+      prevIndex -= layers[ i + 1 ];
+      }
+
+   // Modify weights for all the neurons;
+   for ( unsigned int i = 0; i < neuronsCount; i ++ )
+      {
+      neurons[ i ]->createDampingBuffers();
+      neurons[ i ]->modifyWeights( damping, speed );
+      }
+
+   lua_pushnumber( L, 0 );
+   return 1;
+   };
+
+
 /***************************************************************************
  *   Math API functions implementation                                     *
  ***************************************************************************/
@@ -1019,7 +1328,6 @@ int createActFunc( lua_State * L )
 
    // Read actFunc argument;
    int actFunc = luaL_checknumber( L, 1 );
-
    switch ( actFunc )
       {
       case ACT_FUNC::CUSTOM:
@@ -1091,6 +1399,87 @@ int createActFunc( lua_State * L )
    };
 
 
+int createProcUnit( lua_State * L )
+   {
+   KernelObjectId id = 0;
+
+   // Read procUnit argument;
+   int procUnit = luaL_checknumber( L, 1 );
+   switch ( procUnit )
+      {
+      case PROC_UNIT::CUSTOM:
+         {
+         // Read luaFunction argument;
+         CustomFunction * luaFunction = new CustomFunction( 2 );
+
+         id = kernel->insertObject( new CustomProcessingUnit( luaFunction ) );
+         break;
+         }
+      case PROC_UNIT::RADIAL_BASIS:
+         {
+         // Read coeffUsage argument;
+         COEFF_USAGE::T_COEFF_USAGE coeffUsage = ( COEFF_USAGE::T_COEFF_USAGE ) luaL_checknumber( L, 2 );
+
+         id = kernel->insertObject( new RadialBasisProcessingUnit( coeffUsage ) );
+         break;
+         }
+      case PROC_UNIT::SCALAR:
+         {
+         id = kernel->insertObject( new ScalarProcessingUnit() );
+         break;
+         }
+      case PROC_UNIT::WEIGHTED_SUM:
+         {
+         id = kernel->insertObject( new WeightedSumProcessingUnit() );
+         break;
+         }
+      default:
+         // Do nothing;
+         break;
+      }
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
+int createDistribution( lua_State * L )
+   {
+   KernelObjectId id = 0;
+
+   // Read distr argument;
+   int distr = luaL_checknumber( L, 1 );
+   switch ( distr )
+      {
+      case DISTR::CUSTOM:
+         {
+         CustomFunction * luaInverseFunction = new CustomFunction( 2 );
+         id = kernel->insertObject( new CustomDistribution( luaInverseFunction ) );
+         break;
+         }
+      case DISTR::EXP:
+         {
+         double lambda = luaL_checknumber( L, 2 );
+         id = kernel->insertObject( new ExponentialDistribution( lambda ) );
+         break;
+         }
+      case DISTR::WEIBULL:
+         {
+         double teta = luaL_checknumber( L, 2 );
+         double beta = luaL_checknumber( L, 3 );
+         id = kernel->insertObject( new WeibullDistribution( teta, beta ) );
+         break;
+         }
+      default:
+         // Do nothing;
+         break;
+      }
+
+   lua_pushnumber( L, id );
+   return 1;
+   };
+
+
 int calcMeanCI( lua_State * L )
    {
    // Read mean argument;
@@ -1148,53 +1537,18 @@ int calcACProbabilityCI( lua_State * L )
  ***************************************************************************/
 
 
-int createExponentialDestribution( lua_State * L )
+int createInterruptManager( lua_State * L )
    {
    KernelObjectId id = 0;
 
-   // Read lambda argument;
-   double lambda = luaL_checknumber( L, 1 );
+   // Read component argument;
+   KernelObjectId componentId = luaL_checkinteger( L, 1 );
+   KernelObject * component = kernel->getObject( componentId );
 
-   ExponentialDestribution * destribution = new ExponentialDestribution( lambda );
-   id = kernel->insertObject( destribution );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createWeibullDestribution( lua_State * L )
-   {
-   KernelObjectId id = 0;
-
-   // Read teta argument;
-   double teta = luaL_checknumber( L, 1 );
-
-   // Read beta argument;
-   double beta = luaL_checknumber( L, 2 );
-
-   WeibullDestribution * destribution = new WeibullDestribution( teta, beta );
-   id = kernel->insertObject( destribution );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createAbstractWeightsManager( lua_State * L )
-   {
-   KernelObjectId id = 0;
-   KernelObject * object = NULL;
-
-   // Read destribution argument;
-   KernelObjectId destributionId = luaL_checkinteger( L, 1 );
-   object = kernel->getObject( destributionId );
-   Destribution * destribution = dynamic_cast < Destribution * >( object );
-
-   // Read weights argument;
-   KernelObjectId weightsId = luaL_checkinteger( L, 2 );
-   object = kernel->getObject( weightsId );
-   AbstractWeights * weights = dynamic_cast < AbstractWeights * >( object );
+   // Read distribution argument;
+   KernelObjectId distributionId = luaL_checkinteger( L, 2 );
+   KernelObject * object = kernel->getObject( distributionId );
+   Distribution * distribution = dynamic_cast < Distribution * >( object );
 
    // Read fixFunction argument;
    CustomFunction * fixFunction = NULL;
@@ -1203,36 +1557,38 @@ int createAbstractWeightsManager( lua_State * L )
       fixFunction = new CustomFunction( 3 );
       }
 
-   id = kernel->insertObject( new AbstractWeightsManager( destribution, weights, fixFunction ) );
-
-   lua_pushnumber( L, id );
-   return 1;
-   };
-
-
-int createAnalogResistorsManager( lua_State * L )
-   {
-   KernelObjectId id = 0;
-   KernelObject * object = NULL;
-
-   // Read destribution argument;
-   KernelObjectId destributionId = luaL_checkinteger( L, 1 );
-   object = kernel->getObject( destributionId );
-   Destribution * destribution = dynamic_cast < Destribution * >( object );
-
-   // Read resistors argument;
-   KernelObjectId resistorsId = luaL_checkinteger( L, 2 );
-   object = kernel->getObject( resistorsId );
-   AnalogResistors * resistors = dynamic_cast < AnalogResistors * >( object );
-
-   // Read fixFunction argument;
-   CustomFunction * fixFunction = NULL;
-   if ( ! lua_isnil( L, 3 ) )
+   // Read intSrc argument;
+   AbstractWeights * weights = dynamic_cast < AbstractWeights * >( component );
+   if ( weights != NULL )
       {
-      fixFunction = new CustomFunction( 3 );
+      id = kernel->insertObject( new AbstractWeightsManager( distribution, weights, fixFunction ) );
+      lua_pushnumber( L, id );
+      return 1;
       }
 
-   id = kernel->insertObject( new AnalogResistorsManager( destribution, resistors, fixFunction ) );
+   AnalogCapacitors * capacitors = dynamic_cast < AnalogCapacitors * >( component );
+   if ( capacitors != NULL )
+      {
+      id = kernel->insertObject( new AnalogCapacitorsManager( distribution, capacitors, fixFunction ) );
+      lua_pushnumber( L, id );
+      return 1;
+      }
+
+   AnalogResistors * resistors = dynamic_cast < AnalogResistors * >( component );
+   if ( resistors != NULL )
+      {
+      id = kernel->insertObject( new AnalogResistorsManager( distribution, resistors, fixFunction ) );
+      lua_pushnumber( L, id );
+      return 1;
+      }
+
+   MemoryModule * memory = dynamic_cast < MemoryModule * >( component );
+   if ( memory != NULL )
+      {
+      id = kernel->insertObject( new MemoryModuleManager( distribution, memory, fixFunction ) );
+      lua_pushnumber( L, id );
+      return 1;
+      }
 
    lua_pushnumber( L, id );
    return 1;
@@ -1303,7 +1659,7 @@ int simulateInterrupt( lua_State * L )
    InterruptManager * manager = dynamic_cast < InterruptManager * >( object );
 
    // Read intSource argument;
-   unsigned int intSource = luaL_checkinteger( L, 1 );
+   unsigned int intSource = luaL_checkinteger( L, 2 );
 
    manager->simulateInterrupt( intSource );
    return 0;

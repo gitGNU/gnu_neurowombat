@@ -38,8 +38,8 @@ function create( inputs, layers, actFuncs )
    network.neurons = {};
    network.connectorsCount = 1 + inputs;
    network.connectors = 0;
-   network.weightsCount = 0;
-   network.weights = 0;
+   network.memorySize = 0;
+   network.memory = 0;
    network.procUnit = createProcUnit( PROC_UNIT.WEIGHTED_SUM );
 
    local j = inputs;
@@ -47,21 +47,21 @@ function create( inputs, layers, actFuncs )
       network.layers[ i ] = layers[ i ];
       network.neuronsCount = network.neuronsCount + layers[ i ];
       network.connectorsCount = network.connectorsCount + layers[ i ];
-      network.weightsCount = network.weightsCount + layers[ i ] * ( j + 1 );
+      network.memorySize = network.memorySize + layers[ i ] * ( j + 1 );
       j = layers[ i ];
       end
 
-   -- Create abstract components for multilayer perceptron;
-   network.connectors = createAbstractConnectors( network.connectorsCount );
-   network.weights = createAbstractWeights( network.weightsCount );
+   -- Create digital components for multilayer perceptron;
+   network.connectors = createDigitalConnectors( network.connectorsCount );
+   network.memory = createMemoryModule( network.memorySize );
 
-   -- Set 1.0 signal for the first connector;
-   setSignals( network.connectors, 0, { 1.0 } );
+   -- Set 1.0 value for the first connector;
+   setValues( network.connectors, 0, { 1.0 } );
 
    -- Create neuron layers;
    local neuronsBaseIndex = 1;
    local connectorsBaseIndex = 1;
-   local weightsBaseIndex = 0;
+   local memoryBaseIndex = 0;
    local prevNeuronsCount = inputs;
    for i = 1, #layers do
       local inputConnectors = { 0 };
@@ -71,18 +71,18 @@ function create( inputs, layers, actFuncs )
          end
 
       for j = 1, layers[ i ] do
-         network.neurons[ neuronsBaseIndex ] = createAbstractNeuron(
+         network.neurons[ neuronsBaseIndex ] = createDigitalNeuron(
             prevNeuronsCount + 1,
             inputConnectors,
             network.connectors, connectorsBaseIndex,
-            network.weights, weightsBaseIndex,
+            network.memory, memoryBaseIndex,
             network.procUnit,
             actFuncs[ i ]
             );
 
          neuronsBaseIndex = neuronsBaseIndex + 1;
          connectorsBaseIndex = connectorsBaseIndex + 1;
-         weightsBaseIndex = weightsBaseIndex + prevNeuronsCount + 1;
+         memoryBaseIndex = memoryBaseIndex + prevNeuronsCount + 1;
          end
 
       connectorsBaseIndex = connectorsBaseIndex - layers[ i ];
@@ -99,27 +99,27 @@ function destroy( network )
       end
 
    closeId( network.procUnit );
-   closeId( network.weights );
+   closeId( network.memory );
    closeId( network.connectors );
    end;
 
 
 function train( network, vectors, err, damping, speed, epochsLimit )
    local w = {}
-   for i = 1, network.weightsCount do
+   for i = 1, network.memorySize do
       w[ i ] = 1.0 - 2.0 * math.random();
       end
 
-   setAbstractWeights( network.weights, 0, w );
+   setDigitalWeights( network.memory, 0, w );
 
    local lastLayer = network.layers[ #network.layers ];
    local epochs = 0;
    while epochs < epochsLimit do
       local vec = epochs % #vectors + 1;
-      setSignals( network.connectors, 1, vectors[ vec ][ 1 ] );
-      trainBPAbstractNeurons( network.neurons, network.layers, vectors[ vec ][ 2 ], damping, speed );
-      computeAbstractNeurons( network.neurons, 1 );
-      local y = getSignals( network.connectors, network.connectorsCount - lastLayer, lastLayer );
+      setValues( network.connectors, 1, vectors[ vec ][ 1 ] );
+      trainBPDigitalNeurons( network.neurons, network.layers, vectors[ vec ][ 2 ], damping, speed );
+      computeDigitalNeurons( network.neurons, 1 );
+      local y = getValues( network.connectors, network.connectorsCount - lastLayer, lastLayer );
 
       if distance( vectors[ vec ][ 2 ], y ) <= err then
          -- Complete test;
@@ -141,9 +141,9 @@ function train( network, vectors, err, damping, speed, epochsLimit )
 
 
 function compute( network, x )
-   setSignals( network.connectors, 1, x );
-   computeAbstractNeurons( network.neurons, 1 );
+   setValues( network.connectors, 1, x );
+   computeDigitalNeurons( network.neurons, 1 );
    local lastLayer = network.layers[ #network.layers ];
-   return getSignals( network.connectors, network.connectorsCount - lastLayer, lastLayer );
+   return getValues( network.connectors, network.connectorsCount - lastLayer, lastLayer );
    end
 

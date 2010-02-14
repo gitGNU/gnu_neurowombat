@@ -18,54 +18,54 @@
  ***************************************************************************/
 
 
-#include "components/abstract/AbstractWeights.h"
+#include "components/digital/MemoryModule.h"
 
 
 /***************************************************************************
- *   AbstractWeights class implementation                                  *
+ *   MemoryModule class implementation                                     *
  ***************************************************************************/
 
 
-AbstractWeights::AbstractWeights( unsigned int count )
+MemoryModule::MemoryModule( unsigned int count )
    : ComponentsSet < double >::ComponentsSet( count )
    {
    // Do nothing;
    };
 
 
-AbstractWeights::~AbstractWeights()
+MemoryModule::~MemoryModule()
    {
    // Do nothing;
    };
 
 
 /***************************************************************************
- *   AbstractWeightsManager class implementation                           *
+ *   MemoryModuleManager class implementation                              *
  ***************************************************************************/
 
 
-AbstractWeightsManager::AbstractWeightsManager()
+MemoryModuleManager::MemoryModuleManager()
    : InterruptManager()
    {
    // Do nothing;
    };
 
 
-AbstractWeightsManager::AbstractWeightsManager(
+MemoryModuleManager::MemoryModuleManager(
    Distribution * distribution,
-   AbstractWeights * abstractWeights,
+   MemoryModule * memoryModule,
    CustomFunction * fixFunction
    )
    : InterruptManager(
-      ( abstractWeights != NULL ) ? abstractWeights->count() : 0,
+      ( memoryModule != NULL ) ? memoryModule->count() * 64 : 0,
       false,
       distribution
       )
    {
-   this->abstractWeights = abstractWeights;
+   this->memoryModule = memoryModule;
 
    // Capture object;
-   if ( abstractWeights != NULL ) abstractWeights->capture();
+   if ( memoryModule != NULL ) memoryModule->capture();
 
    this->fixFunction = fixFunction;
 
@@ -77,13 +77,13 @@ AbstractWeightsManager::AbstractWeightsManager(
    else
       {
       // Create backup;
-      unsigned int backupLength = abstractWeights->count();
+      unsigned backupLength = memoryModule->count();
       if ( backupLength > 0 )
          {
          backup = new double[ backupLength ];
          for ( unsigned int i = 0; i < backupLength; i ++ )
             {
-            backup[ i ] = abstractWeights->at( i );
+            backup[ i ] = memoryModule->at( i );
             }
          }
       else
@@ -94,32 +94,42 @@ AbstractWeightsManager::AbstractWeightsManager(
    };
 
 
-AbstractWeightsManager::~AbstractWeightsManager()
+MemoryModuleManager::~MemoryModuleManager()
    {
    // Release captured object;
-   if ( abstractWeights != NULL ) abstractWeights->release();
+   if ( memoryModule != NULL ) memoryModule->release();
    if ( fixFunction != NULL ) fixFunction->release();
 
    if ( backup != NULL ) delete[] backup;
    };
 
 
-void AbstractWeightsManager::simulateInterrupt( unsigned int intSource )
+void MemoryModuleManager::simulateInterrupt( unsigned int intSource )
    {
-   if ( intSource < intSourcesCount && abstractWeights != NULL )
+   if ( intSource < intSourcesCount && memoryModule != NULL )
       {
-      abstractWeights->at( intSource ) = 0.0;
+      unsigned int wordIndex = intSource / 64;
+      unsigned int bitInWordIndex = intSource % 64;
+      unsigned char mask = ~ ( 0x01 << ( 7 - bitInWordIndex % 8 ) );
+      double word = memoryModule->at( wordIndex );
+      ( ( unsigned char * ) & word )[ bitInWordIndex / 8 ] &= mask;
+      memoryModule->at( wordIndex ) = word;
       }
    };
 
 
-void AbstractWeightsManager::handleInterrupt()
+void MemoryModuleManager::handleInterrupt()
    {
-   // Break up weight;
-   int weightIndex = getIntSource();
-   if ( weightIndex >= 0 && abstractWeights != NULL )
+   // Break up bit;
+   int bitIndex = getIntSource();
+   if ( bitIndex >= 0 && memoryModule != NULL )
       {
-      abstractWeights->at( weightIndex ) = 0.0;
+      unsigned int wordIndex = bitIndex / 64;
+      unsigned int bitInWordIndex = bitIndex % 64;
+      unsigned char mask = ~ ( 0x01 << ( 7 - bitInWordIndex % 8 ) );
+      double word = memoryModule->at( wordIndex );
+      ( ( unsigned char * ) & word )[ bitInWordIndex / 8 ] &= mask;
+      memoryModule->at( wordIndex ) = word;
       }
 
    // Pass control to base implementation;
@@ -127,7 +137,7 @@ void AbstractWeightsManager::handleInterrupt()
    };
 
 
-void AbstractWeightsManager::reinit()
+void MemoryModuleManager::reinit()
    {
    // Call base implementation;
    InterruptManager::reinit();
@@ -138,10 +148,10 @@ void AbstractWeightsManager::reinit()
       }
    else
       {
-      // Restore weights from backup;
-      for ( unsigned int i = 0; i < abstractWeights->count(); i ++ )
+      // Restore words from backup;
+      for ( unsigned int i = 0; i < memoryModule->count(); i ++ )
          {
-         abstractWeights->at( i ) = backup[ i ];
+         memoryModule->at( i ) = backup[ i ];
          }
       }
    };

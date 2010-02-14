@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *

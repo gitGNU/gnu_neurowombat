@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -58,16 +58,21 @@ CustomActivationFunction::CustomActivationFunction( CustomFunction * customFunct
    };
 
 
+CustomActivationFunction::CustomActivationFunction( const CustomActivationFunction & other )
+   : ActivationFunction( other )
+   {
+   customFunction = other.customFunction;
+   customDerivative = other.customDerivative;
+
+   if ( customFunction != NULL ) customFunction->capture();
+   if ( customDerivative != NULL ) customDerivative->capture();
+   };
+
+
 CustomActivationFunction::~CustomActivationFunction()
    {
    if ( customFunction != NULL ) customFunction->release();
    if ( customDerivative != NULL ) customDerivative->release();
-   };
-
-
-ActivationFunction * CustomActivationFunction::clone()
-   {
-   return new CustomActivationFunction( * this );
    };
 
 
@@ -80,16 +85,6 @@ double CustomActivationFunction::evaluateFunction( double x )
 double CustomActivationFunction::evaluateDerivative( double x )
    {
    return customDerivative->call( x );
-   };
-
-
-CustomActivationFunction::CustomActivationFunction( const CustomActivationFunction & other )
-   {
-   customFunction = other.customFunction;
-   customDerivative = other.customDerivative;
-
-   if ( customFunction != NULL ) customFunction->capture();
-   if ( customDerivative != NULL ) customDerivative->capture();
    };
 
 
@@ -108,12 +103,6 @@ GaussianActivationFunction::GaussianActivationFunction( double beta )
 GaussianActivationFunction::~GaussianActivationFunction()
    {
    // Do nothing;
-   };
-
-
-ActivationFunction * GaussianActivationFunction::clone()
-   {
-   return new GaussianActivationFunction( * this );
    };
 
 
@@ -149,12 +138,6 @@ LimActivationFunction::~LimActivationFunction()
    };
 
 
-ActivationFunction * LimActivationFunction::clone()
-   {
-   return new LimActivationFunction( * this );
-   };
-
-
 double LimActivationFunction::evaluateFunction( double x )
    {
    return ( x < xLim ) ? yLow : yHigh;
@@ -183,12 +166,6 @@ LinearActivationFunction::LinearActivationFunction( double a, double b )
 LinearActivationFunction::~LinearActivationFunction()
    {
    // Do nothing;
-   };
-
-
-ActivationFunction * LinearActivationFunction::clone()
-   {
-   return new LinearActivationFunction( * this );
    };
 
 
@@ -222,12 +199,6 @@ LimLinearActivationFunction::LimLinearActivationFunction( double a, double b, do
 LimLinearActivationFunction::~LimLinearActivationFunction()
    {
    // Do nothing;
-   };
-
-
-ActivationFunction * LimLinearActivationFunction::clone()
-   {
-   return new LimLinearActivationFunction( * this );
    };
 
 
@@ -276,12 +247,6 @@ PosLinearActivationFunction::~PosLinearActivationFunction()
    };
 
 
-ActivationFunction * PosLinearActivationFunction::clone()
-   {
-   return new PosLinearActivationFunction( * this );
-   };
-
-
 double PosLinearActivationFunction::evaluateFunction( double x )
    {
    double f = a * x + b;
@@ -313,12 +278,6 @@ SigmoidActivationFunction::~SigmoidActivationFunction()
    };
 
 
-ActivationFunction * SigmoidActivationFunction::clone()
-   {
-   return new SigmoidActivationFunction( * this );
-   };
-
-
 double SigmoidActivationFunction::evaluateFunction( double x )
    {
    return ( 1.0 / ( 1.0 + exp( - lambda * x ) ) );
@@ -347,12 +306,6 @@ ThSigmoidActivationFunction::ThSigmoidActivationFunction()
 ThSigmoidActivationFunction::~ThSigmoidActivationFunction()
    {
    // Do nothing;
-   };
-
-
-ActivationFunction * ThSigmoidActivationFunction::clone()
-   {
-   return new ThSigmoidActivationFunction( * this );
    };
 
 

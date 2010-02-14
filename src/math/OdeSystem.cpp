@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -182,6 +182,115 @@ AbstractNeuronsOdeSystem::AbstractNeuronsOdeSystem()
 
 
 AbstractNeuronsOdeSystem::AbstractNeuronsOdeSystem( AbstractNeuronsOdeSystem & other )
+   : OdeSystem( other )
+   {
+   // Do nothing;
+   };
+
+
+/***************************************************************************
+ *   AnalogLimNeuronsOdeSystem class implementation                        *
+ ***************************************************************************/
+
+
+AnalogLimNeuronsOdeSystem::AnalogLimNeuronsOdeSystem(
+   std::vector < AnalogNeuron * > * neurons
+   )
+   : OdeSystem( ( neurons != NULL ) ? 2 * neurons->size() : 0 )
+   {
+   this->neurons = neurons;
+
+   // Initialize independent variable;
+   indepVar = 0.0;
+
+   // Initialize dependent variables;
+   for ( unsigned int i = 0; i < neurons->size(); i ++ )
+      {
+      depVars[ i ] = neurons->at( i )->leftComputePos();
+      depVars[ i + neurons->size() ] = neurons->at( i )->leftComputeNeg();
+      }
+   };
+
+
+AnalogLimNeuronsOdeSystem::~AnalogLimNeuronsOdeSystem()
+   {
+   // Do nothing;
+   };
+
+
+double AnalogLimNeuronsOdeSystem::evaluateOdeFunction( unsigned int index )
+   {
+   double result = 0.0;
+   if ( index < neurons->size() )
+      {
+      result = neurons->at( index )->getPosConstant();
+      if ( result != 0.0 ) result = ( - depVars[ index ] + neurons->at( index )->leftComputePos() ) / result;
+      }
+   else
+      {
+      result = neurons->at( index - neurons->size() )->getNegConstant();
+      if ( result != 0.0 ) result = ( - depVars[ index ] + neurons->at( index - neurons->size() )->leftComputeNeg() ) / result;
+      }
+
+   return result;
+   };
+
+
+void AnalogLimNeuronsOdeSystem::setDependentVariable( unsigned int index, double x )
+   {
+   depVars[ index ] = x;
+
+   if ( index < neurons->size() )
+      {
+      neurons->at( index )->rightCompute( depVars[ index + neurons->size() ], depVars[ index ] );
+      }
+   else
+      {
+      neurons->at( index - neurons->size() )->rightCompute( depVars[ index ], depVars[ index - neurons->size() ] );
+      }
+   };
+
+
+void AnalogLimNeuronsOdeSystem::incDependentVariable( unsigned int index, double x )
+   {
+   depVars[ index ] += x;
+
+   if ( index < neurons->size() )
+      {
+      neurons->at( index )->rightCompute( depVars[ index + neurons->size() ], depVars[ index ] );
+      }
+   else
+      {
+      neurons->at( index - neurons->size() )->rightCompute( depVars[ index ], depVars[ index - neurons->size() ] );
+      }
+   };
+
+
+void AnalogLimNeuronsOdeSystem::incDependentVariables( double * x1, double * x2, double k1, double k2 )
+   {
+   for ( unsigned int i = 0; i < equationsCount; i ++ )
+      {
+      depVars[ i ] += k1 * x1[ i ] + k2 * x2[ i ];
+      if ( i < neurons->size() )
+         {
+         neurons->at( i )->rightCompute( depVars[ i + neurons->size() ], depVars[ i ] );
+         }
+      else
+         {
+         neurons->at( i - neurons->size() )->rightCompute( depVars[ i ], depVars[ i - neurons->size() ] );
+         }
+      }
+   };
+
+
+AnalogLimNeuronsOdeSystem::AnalogLimNeuronsOdeSystem()
+   : OdeSystem()
+   {
+   // Do nothing;
+   };
+
+
+AnalogLimNeuronsOdeSystem::AnalogLimNeuronsOdeSystem( AnalogLimNeuronsOdeSystem & other )
    : OdeSystem( other )
    {
    // Do nothing;

@@ -18,54 +18,54 @@
  ***************************************************************************/
 
 
-#include "components/abstract/AbstractWeights.h"
+#include "components/analog/AnalogCapacitors.h"
 
 
 /***************************************************************************
- *   AbstractWeights class implementation                                  *
+ *   AnalogCapacitors class implementation                                 *
  ***************************************************************************/
 
 
-AbstractWeights::AbstractWeights( unsigned int count )
+AnalogCapacitors::AnalogCapacitors( unsigned int count )
    : ComponentsSet < double >::ComponentsSet( count )
    {
    // Do nothing;
    };
 
 
-AbstractWeights::~AbstractWeights()
+AnalogCapacitors::~AnalogCapacitors()
    {
    // Do nothing;
    };
 
 
 /***************************************************************************
- *   AbstractWeightsManager class implementation                           *
+ *   AnalogCapacitorsManager class implementation                          *
  ***************************************************************************/
 
 
-AbstractWeightsManager::AbstractWeightsManager()
+AnalogCapacitorsManager::AnalogCapacitorsManager()
    : InterruptManager()
    {
    // Do nothing;
    };
 
 
-AbstractWeightsManager::AbstractWeightsManager(
+AnalogCapacitorsManager::AnalogCapacitorsManager(
    Distribution * distribution,
-   AbstractWeights * abstractWeights,
+   AnalogCapacitors * analogCapacitors,
    CustomFunction * fixFunction
    )
    : InterruptManager(
-      ( abstractWeights != NULL ) ? abstractWeights->count() : 0,
+      ( analogCapacitors != NULL ) ? analogCapacitors->count() : 0,
       false,
       distribution
       )
    {
-   this->abstractWeights = abstractWeights;
+   this->analogCapacitors = analogCapacitors;
 
    // Capture object;
-   if ( abstractWeights != NULL ) abstractWeights->capture();
+   if ( analogCapacitors != NULL ) analogCapacitors->capture();
 
    this->fixFunction = fixFunction;
 
@@ -77,13 +77,13 @@ AbstractWeightsManager::AbstractWeightsManager(
    else
       {
       // Create backup;
-      unsigned int backupLength = abstractWeights->count();
+      unsigned int backupLength = analogCapacitors->count();
       if ( backupLength > 0 )
          {
          backup = new double[ backupLength ];
          for ( unsigned int i = 0; i < backupLength; i ++ )
             {
-            backup[ i ] = abstractWeights->at( i );
+            backup[ i ] = analogCapacitors->at( i );
             }
          }
       else
@@ -94,32 +94,32 @@ AbstractWeightsManager::AbstractWeightsManager(
    };
 
 
-AbstractWeightsManager::~AbstractWeightsManager()
+AnalogCapacitorsManager::~AnalogCapacitorsManager()
    {
    // Release captured object;
-   if ( abstractWeights != NULL ) abstractWeights->release();
+   if ( analogCapacitors != NULL ) analogCapacitors->release();
    if ( fixFunction != NULL ) fixFunction->release();
 
    if ( backup != NULL ) delete[] backup;
    };
 
 
-void AbstractWeightsManager::simulateInterrupt( unsigned int intSource )
+void AnalogCapacitorsManager::simulateInterrupt( unsigned int intSource )
    {
-   if ( intSource < intSourcesCount && abstractWeights != NULL )
+   if ( intSource < intSourcesCount && analogCapacitors != NULL )
       {
-      abstractWeights->at( intSource ) = 0.0;
+      analogCapacitors->at( intSource ) = 0.0;
       }
    };
 
 
-void AbstractWeightsManager::handleInterrupt()
+void AnalogCapacitorsManager::handleInterrupt()
    {
-   // Break up weight;
-   int weightIndex = getIntSource();
-   if ( weightIndex >= 0 && abstractWeights != NULL )
+   // Break up capacitor;
+   int capacitorIndex = getIntSource();
+   if ( capacitorIndex >= 0 && analogCapacitors != NULL )
       {
-      abstractWeights->at( weightIndex ) = 0.0;
+      analogCapacitors->at( capacitorIndex ) = 0.0;
       }
 
    // Pass control to base implementation;
@@ -127,7 +127,7 @@ void AbstractWeightsManager::handleInterrupt()
    };
 
 
-void AbstractWeightsManager::reinit()
+void AnalogCapacitorsManager::reinit()
    {
    // Call base implementation;
    InterruptManager::reinit();
@@ -138,10 +138,10 @@ void AbstractWeightsManager::reinit()
       }
    else
       {
-      // Restore weights from backup;
-      for ( unsigned int i = 0; i < abstractWeights->count(); i ++ )
+      // Restore capacitances from backup;
+      for ( unsigned int i = 0; i < analogCapacitors->count(); i ++ )
          {
-         abstractWeights->at( i ) = backup[ i ];
+         analogCapacitors->at( i ) = backup[ i ];
          }
       }
    };

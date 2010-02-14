@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -56,7 +56,6 @@ class ActivationFunction : public KernelObject
    public:
       ActivationFunction();
       virtual ~ActivationFunction();
-      virtual ActivationFunction * clone() = 0;
 
       virtual double evaluateFunction( double x ) = 0;
       virtual double evaluateDerivative( double x ) = 0;
@@ -72,15 +71,13 @@ class CustomActivationFunction : public ActivationFunction
    {
    public:
       CustomActivationFunction( CustomFunction * customFunction, CustomFunction * customDerivative );
+      CustomActivationFunction( const CustomActivationFunction & other );
       virtual ~CustomActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
 
    private:
-      CustomActivationFunction( const CustomActivationFunction & other );
-
       CustomFunction * customFunction;
       CustomFunction * customDerivative;
    };
@@ -96,7 +93,6 @@ class GaussianActivationFunction : public ActivationFunction
    public:
       GaussianActivationFunction( double beta );
       virtual ~GaussianActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
@@ -116,7 +112,6 @@ class LimActivationFunction : public ActivationFunction
    public:
       LimActivationFunction( double xLim, double yLow, double yHigh );
       virtual ~LimActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
@@ -138,7 +133,6 @@ class LinearActivationFunction : public ActivationFunction
    public:
       LinearActivationFunction( double a, double b );
       virtual ~LinearActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
@@ -159,7 +153,6 @@ class LimLinearActivationFunction : public ActivationFunction
    public:
       LimLinearActivationFunction( double a, double b, double xMin, double xMax );
       virtual ~LimLinearActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
@@ -182,7 +175,6 @@ class PosLinearActivationFunction : public ActivationFunction
    public:
       PosLinearActivationFunction( double a, double b );
       virtual ~PosLinearActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
@@ -203,7 +195,6 @@ class SigmoidActivationFunction : public ActivationFunction
    public:
       SigmoidActivationFunction( double lambda );
       virtual ~SigmoidActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );
@@ -223,7 +214,6 @@ class ThSigmoidActivationFunction : public ActivationFunction
    public:
       ThSigmoidActivationFunction();
       virtual ~ThSigmoidActivationFunction();
-      virtual ActivationFunction * clone();
 
       virtual double evaluateFunction( double x );
       virtual double evaluateDerivative( double x );

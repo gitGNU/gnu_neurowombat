@@ -18,36 +18,24 @@
  ***************************************************************************/
 
 
-#include "neurons/abstract/AbstractNeuron.h"
+#include "neurons/digital/DigitalNeuron.h"
 
 
 #include <string.h>
 
 
 /***************************************************************************
- *   AbstractNeuronExcp class implementation                               *
+ *   DigitalNeuron class implementation                                    *
  ***************************************************************************/
 
 
-AbstractNeuronExcp::AbstractNeuronExcp( NS_ABSTRACTNEURON::EC error )
-   : Exception < NS_ABSTRACTNEURON::EC > ( error )
-   {
-   // Do nothing;
-   };
-
-
-/***************************************************************************
- *   AbstractNeuron class implementation                                   *
- ***************************************************************************/
-
-
-AbstractNeuron::AbstractNeuron(
+DigitalNeuron::DigitalNeuron(
    unsigned int inputsCount,
    unsigned int * inputConnectors,
-   AbstractConnectors * connectors,
+   DigitalConnectors * connectors,
    unsigned int connectorsBaseIndex,
-   AbstractWeights * weights,
-   unsigned int weightsBaseIndex,
+   MemoryModule * memory,
+   unsigned int memoryBaseIndex,
    ProcessingUnit * processingUnit,
    ActivationFunction * activationFunction
    )
@@ -76,20 +64,10 @@ AbstractNeuron::AbstractNeuron(
    this->connectorsBaseIndex = connectorsBaseIndex;
    if ( connectors != NULL ) connectors->capture();
 
-   // Try to create built-in weights;
-   if ( weights == NULL && inputsCount > 0 )
-      {
-      builtInWeights = new double[ inputsCount ];
-      }
-   else
-      {
-      builtInWeights = NULL;
-      }
-
-   // Setup weights;
-   this->weights = weights;
-   this->weightsBaseIndex = weightsBaseIndex;
-   if ( weights != NULL ) weights->capture();
+   // Setup memory;
+   this->memory = memory;
+   this->memoryBaseIndex = memoryBaseIndex;
+   if ( memory != NULL ) memory->capture();
 
    // Setup built-in buffers;
    this->builtInBuffers = NULL;
@@ -110,94 +88,56 @@ AbstractNeuron::AbstractNeuron(
    };
 
 
-AbstractNeuron::~AbstractNeuron()
+DigitalNeuron::~DigitalNeuron()
    {
    if ( this->inputConnectors != NULL ) delete[] this->inputConnectors;
-   if ( this->builtInWeights != NULL ) delete[] this->builtInWeights;
    if ( this->builtInBuffers != NULL ) delete[] this->builtInBuffers;
 
    // Release captured objects;
    if ( connectors != NULL ) connectors->release();
-   if ( weights != NULL ) weights->release();
+   if ( memory != NULL ) memory->release();
    if ( activationFunction != NULL ) activationFunction->release();
    if ( processingUnit != NULL ) processingUnit->release();
    };
 
 
-unsigned int AbstractNeuron::getInputsCount() const
+unsigned int DigitalNeuron::getInputsCount() const
    {
    return this->inputsCount;
    };
 
 
-void AbstractNeuron::setWeight( unsigned int index, double weight )
+void DigitalNeuron::setWeight( unsigned int index, double weight )
    {
-   if ( this->weights == NULL )
-      {
-      // Set built-in weight;
-      this->builtInWeights[ index ] = weight;
-      }
-   else
-      {
-      // Set external weight;
-      this->weights->at( weightsBaseIndex + index ) = weight;
-      }
+   this->memory->at( memoryBaseIndex + index ) = weight;
    };
 
 
-double AbstractNeuron::getWeight( unsigned int index )
+double DigitalNeuron::getWeight( unsigned int index )
    {
-   if ( this->weights == NULL )
-      {
-      // Return built-in weights;
-      return this->builtInWeights[ index ];
-      }
-   else
-      {
-      // Return external weights;
-      return this->weights->at( weightsBaseIndex + index );
-      }
+   return this->memory->at( memoryBaseIndex + index );
    };
 
 
-double AbstractNeuron::getOutput()
+double DigitalNeuron::getOutput()
    {
    return connectors->at( connectorsBaseIndex );
    };
 
 
-double AbstractNeuron::leftCompute()
+void DigitalNeuron::compute()
    {
    // Calculate processor out;
    processingUnitOut = processingUnit->process(
       inputsCount, inputConnectors, connectors,
-      builtInWeights, weights, weightsBaseIndex
-      );
-
-   return processingUnitOut;
-   };
-
-
-void AbstractNeuron::rightCompute( double processingUnitOut )
-   {
-   this->processingUnitOut = processingUnitOut;
-   connectors->at( connectorsBaseIndex ) = activationFunction->evaluateFunction( processingUnitOut );
-   };
-
-
-void AbstractNeuron::compute()
-   {
-   // Calculate processor out;
-   processingUnitOut = processingUnit->process(
-      inputsCount, inputConnectors, connectors,
-      builtInWeights, weights, weightsBaseIndex
+      memory, memoryBaseIndex
       );
 
    connectors->at( connectorsBaseIndex ) = activationFunction->evaluateFunction( processingUnitOut );
    };
 
 
-void AbstractNeuron::createDampingBuffers()
+void DigitalNeuron::createDampingBuffers()
    {
    if ( builtInBuffers == NULL )
       {
@@ -210,72 +150,48 @@ void AbstractNeuron::createDampingBuffers()
    };
 
 
-void AbstractNeuron::snapDelta( double err )
+void DigitalNeuron::snapDelta( double err )
    {
    delta = err;
    delta *= activationFunction->evaluateDerivative( processingUnitOut );
    };
 
 
-double AbstractNeuron::getDelta()
+double DigitalNeuron::getDelta()
    {
    return delta;
    };
 
 
-double AbstractNeuron::getWeightedDelta( unsigned int index )
+double DigitalNeuron::getWeightedDelta( unsigned int index )
    {
-   if ( weights == NULL )
-      {
-      // Use build-in weights;
-      return delta * builtInWeights[ index ];
-      }
-   else
-      {
-      // Use external weights;
-      return delta * weights->at( weightsBaseIndex + index );
-      }
+   return delta * memory->at( memoryBaseIndex + index );
    };
 
 
-void AbstractNeuron::modifyWeights( double damping, double speed )
+void DigitalNeuron::modifyWeights( double damping, double speed )
    {
    double d = delta * speed;
    double dw = 0;
 
-   if ( weights == NULL )
+   for ( unsigned int i = 0; i < inputsCount; i ++ )
       {
-      // Use build-in weights;
-      for ( unsigned int i = 0; i < inputsCount; i ++ )
-         {
-         dw = damping * builtInBuffers[ i ] +
-            d * connectors->at( inputConnectors[ i ] );
-         builtInBuffers[ i ] = dw;
-         builtInWeights[ i ] += dw;
-         }
-      }
-   else
-      {
-      // Use external weights;
-      for ( unsigned int i = 0; i < inputsCount; i ++ )
-         {
-         dw = damping * builtInBuffers[ i ] +
-            d * connectors->at( inputConnectors[ i ] );
-         builtInBuffers[ i ] = dw;
-         weights->at( weightsBaseIndex + i ) += dw;
-         }
+      dw = damping * builtInBuffers[ i ] +
+         d * connectors->at( inputConnectors[ i ] );
+      builtInBuffers[ i ] = dw;
+      memory->at( memoryBaseIndex + i ) += dw;
       }
    };
 
 
-AbstractNeuron::AbstractNeuron()
+DigitalNeuron::DigitalNeuron()
    : KernelObject()
    {
    // Do nothing;
    };
 
 
-AbstractNeuron::AbstractNeuron( const AbstractNeuron & other )
+DigitalNeuron::DigitalNeuron( const DigitalNeuron & other )
    {
    // Do nothing;
    };

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -22,8 +22,7 @@
 #define ABSTRACTCONNECTORS_H
 
 
-#include "kernel/KernelObject.h"
-//#include "InterruptManager.h"
+#include "components/ComponentsSet.h"
 
 
 /***************************************************************************
@@ -31,47 +30,12 @@
  ***************************************************************************/
 
 
-class AbstractConnectors : public KernelObject
+class AbstractConnectors : public ComponentsSet < double >
    {
    public:
       AbstractConnectors( unsigned int count = 0 );
-      ~AbstractConnectors();
-
-      unsigned int count() const;
-
-      void copySignal( unsigned int destIndex, unsigned int srcIndex );
-      void setSignal( unsigned int index, double signal );
-      double getSignal( unsigned int index ) const;
-
-      void repareAll();
-      void breakWire( unsigned int index );
-      void repareWire( unsigned int index );
-
-   private:
-      unsigned int numWires;
-      double * analogSignals;
-      bool * broken;
+      virtual ~AbstractConnectors();
    };
-
-
-/***************************************************************************
- *   AbstractConnectorsManager class declaration                           *
- ***************************************************************************/
-
-
-/*class AnalogWiresManager : public InterruptManager
-   {
-   public:
-      AnalogWiresManager();
-      AnalogWiresManager(
-         Destribution & destribution,
-         AnalogWires * analogWires
-         );
-
-      virtual ~AnalogWiresManager();
-
-      virtual void handleInterrupt();
-   };*/
 
 
 #endif

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -18,47 +18,82 @@
  ***************************************************************************/
 
 
-#ifndef DESTRIBUTION_H
-#define DESTRIBUTION_H
+#ifndef DISTRIBUTION_H
+#define DISTRIBUTION_H
 
 
-// This module use random generator;
+// This module uses random generator;
 
 
 #include "kernel/KernelObject.h"
+#include "objects/CustomFunction.h"
 
 
 /***************************************************************************
- *   Destribution abstract class declaration                               *
+ *   T_DISTR enum declaration                                              *
+ ***************************************************************************/
+
+namespace DISTR
+   {
+   enum T_DISTR
+      {
+      CUSTOM,
+      EXP,
+      WEIBULL
+      };
+   };
+
+
+/***************************************************************************
+ *   Distribution abstract class declaration                               *
  ***************************************************************************/
 
 
-class Destribution : public KernelObject
+class Distribution : public KernelObject
    {
    public:
-      Destribution();
-      virtual ~Destribution();
-      virtual Destribution * clone() = 0;
+      Distribution();
+      virtual ~Distribution();
 
       virtual double generateTime() = 0;
 
    protected:
-      // Use QT's qrand();
+      // Use rand();
       inline double genUniformRandomValue();
    };
 
 
 /***************************************************************************
- *   ExponentialDestribution class declaration                             *
+ *   CustomDistribution class declaration                                  *
  ***************************************************************************/
 
 
-class ExponentialDestribution : public Destribution
+class CustomDistribution : public Distribution
    {
    public:
-      ExponentialDestribution( double lambda );
-      virtual ~ExponentialDestribution();
-      virtual Destribution * clone();
+      CustomDistribution( CustomFunction * customInverseFunction );
+      CustomDistribution( CustomDistribution & other );
+      virtual ~CustomDistribution();
+
+      virtual double generateTime();
+
+   private:
+      CustomDistribution( const CustomDistribution & other );
+
+      CustomFunction * customInverseFunction;
+   };
+
+
+/***************************************************************************
+ *   ExponentialDistribution class declaration                             *
+ ***************************************************************************/
+
+
+class ExponentialDistribution : public Distribution
+   {
+   public:
+      ExponentialDistribution( double lambda );
+      virtual ~ExponentialDistribution();
 
       virtual double generateTime();
 
@@ -68,16 +103,15 @@ class ExponentialDestribution : public Destribution
 
 
 /***************************************************************************
- *   WeibullDestribution class declaration                                 *
+ *   WeibullDistribution class declaration                                 *
  ***************************************************************************/
 
 
-class WeibullDestribution : public Destribution
+class WeibullDistribution : public Distribution
    {
    public:
-      WeibullDestribution( double theta, double beta );
-      virtual ~WeibullDestribution();
-      virtual Destribution * clone();
+      WeibullDistribution( double theta, double beta );
+      virtual ~WeibullDistribution();
 
       virtual double generateTime();
 

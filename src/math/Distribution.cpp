@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -22,27 +22,27 @@
 #include <stdlib.h>
 
 
-#include "math/Destribution.h"
+#include "math/Distribution.h"
 
 
 /***************************************************************************
- *   Destribution abstract class implementation                            *
+ *   Distribution abstract class implementation                            *
  ***************************************************************************/
 
 
-Destribution::Destribution()
+Distribution::Distribution()
    {
    // Do nothing;
    };
 
 
-Destribution::~Destribution()
+Distribution::~Distribution()
    {
    // Do nothing;
    };
 
 
-inline double Destribution::genUniformRandomValue()
+inline double Distribution::genUniformRandomValue()
    {
    return (
       ( ( double ) rand() )
@@ -53,61 +53,84 @@ inline double Destribution::genUniformRandomValue()
 
 
 /***************************************************************************
- *   ExponentialDestribution class implementation                          *
+ *   CustomDistribution class implementation                               *
  ***************************************************************************/
 
 
-ExponentialDestribution::ExponentialDestribution( double lambda )
-   : Destribution()
+CustomDistribution::CustomDistribution( CustomFunction * customInverseFunction )
+   : Distribution()
+   {
+   this->customInverseFunction = customInverseFunction;
+
+   if ( customInverseFunction != NULL ) customInverseFunction->capture();
+   };
+
+
+CustomDistribution::CustomDistribution( const CustomDistribution & other )
+   : Distribution( other )
+   {
+   customInverseFunction = other.customInverseFunction;
+
+   if ( customInverseFunction != NULL ) customInverseFunction->capture();
+   };
+
+
+CustomDistribution::~CustomDistribution()
+   {
+   if ( customInverseFunction != NULL ) customInverseFunction->release();
+   };
+
+
+double CustomDistribution::generateTime()
+   {
+   return customInverseFunction->call( genUniformRandomValue() );
+   };
+
+
+/***************************************************************************
+ *   ExponentialDistribution class implementation                          *
+ ***************************************************************************/
+
+
+ExponentialDistribution::ExponentialDistribution( double lambda )
+   : Distribution()
    {
    this->lambda = lambda;
    };
 
 
-ExponentialDestribution::~ExponentialDestribution()
+ExponentialDistribution::~ExponentialDistribution()
    {
    // Do nothing;
    };
 
 
-Destribution * ExponentialDestribution::clone()
+double ExponentialDistribution::generateTime()
    {
-   return new ExponentialDestribution( * this );
-   };
-
-
-double ExponentialDestribution::generateTime()
-   {
-   return ( - log( 1.0 - this->genUniformRandomValue() ) ) / this->lambda;
+   return ( - log( 1.0 - genUniformRandomValue() ) ) / lambda;
    };
 
 
 /***************************************************************************
- *   WeibullDestribution class implementation                              *
+ *   WeibullDistribution class implementation                              *
  ***************************************************************************/
 
 
-WeibullDestribution::WeibullDestribution( double theta, double beta )
-   : Destribution()
+WeibullDistribution::WeibullDistribution( double theta, double beta )
+   : Distribution()
    {
    this->theta = theta;
    this->beta = beta;
    };
 
 
-WeibullDestribution::~WeibullDestribution()
+WeibullDistribution::~WeibullDistribution()
    {
    // Do nothing;
    };
 
 
-Destribution * WeibullDestribution::clone()
+double WeibullDistribution::generateTime()
    {
-   return new WeibullDestribution( * this );
-   };
-
-
-double WeibullDestribution::generateTime()
-   {
-   return pow( - log( 1.0 - this->genUniformRandomValue() ) / this->theta, 1.0 / this->beta );
+   return pow( - log( 1.0 - genUniformRandomValue() ) / theta, 1.0 / beta );
    };

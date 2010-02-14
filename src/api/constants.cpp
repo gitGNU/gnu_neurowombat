@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -20,7 +20,8 @@
 
 #include "api/constants.h"
 #include "math/ActivationFunction.h"
-#include "components/abstract/AbstractProcessor.h"
+#include "math/ProcessingUnit.h"
+#include "math/Distribution.h"
 
 
 #include <stdio.h>
@@ -29,8 +30,9 @@
 void registerApiConstants( lua_State * L )
    {
    registerActivationFunctions( L );
-   registerAbstractProcessors( L );
+   registerProcessingUnits( L );
    registerCoefficientUsage( L );
+   registerDistributions( L );
    };
 
 
@@ -49,6 +51,7 @@ int newIndexHandler( lua_State * L )
 /***************************************************************************
  *   Registration functions implementation                                 *
  ***************************************************************************/
+
 
 void registerActivationFunctions( lua_State * L )
    {
@@ -101,7 +104,7 @@ void registerActivationFunctions( lua_State * L )
    };
 
 
-void registerAbstractProcessors( lua_State * L )
+void registerProcessingUnits( lua_State * L )
    {
    // Create an empty table;
    lua_newtable( L );
@@ -113,16 +116,16 @@ void registerAbstractProcessors( lua_State * L )
    // Create table to be set as __index;
    lua_newtable( L );
    lua_pushstring( L, "CUSTOM" );
-   lua_pushnumber( L, ABSTRACT_PROCESSOR::CUSTOM );
+   lua_pushnumber( L, PROC_UNIT::CUSTOM );
    lua_rawset( L, -3 );
    lua_pushstring( L, "RADIAL_BASIS" );
-   lua_pushnumber( L, ABSTRACT_PROCESSOR::RADIAL_BASIS );
+   lua_pushnumber( L, PROC_UNIT::RADIAL_BASIS );
    lua_rawset( L, -3 );
    lua_pushstring( L, "SCALAR" );
-   lua_pushnumber( L, ABSTRACT_PROCESSOR::SCALAR );
+   lua_pushnumber( L, PROC_UNIT::SCALAR );
    lua_rawset( L, -3 );
    lua_pushstring( L, "WEIGHTED_SUM" );
-   lua_pushnumber( L, ABSTRACT_PROCESSOR::WEIGHTED_SUM );
+   lua_pushnumber( L, PROC_UNIT::WEIGHTED_SUM );
    lua_rawset( L, -3 );
 
    // Set this table as __index field for metatable;
@@ -136,7 +139,7 @@ void registerAbstractProcessors( lua_State * L )
    lua_setmetatable( L, -2 );
 
    // Register this table;
-   lua_setglobal( L, "ABSTRACT_PROCESSOR" );
+   lua_setglobal( L, "PROC_UNIT" );
    };
 
 
@@ -185,4 +188,40 @@ void registerCoefficientUsage( lua_State * L )
 
    // Register this table;
    lua_setglobal( L, "COEFF_USAGE" );
+   };
+
+
+void registerDistributions( lua_State * L )
+   {
+   // Create an empty table;
+   lua_newtable( L );
+
+   // Create metatable;
+   lua_newtable( L );
+   lua_pushstring( L, "__index" );
+
+   // Create table to be set as __index;
+   lua_newtable( L );
+   lua_pushstring( L, "CUSTOM" );
+   lua_pushnumber( L, DISTR::CUSTOM );
+   lua_rawset( L, -3 );
+   lua_pushstring( L, "EXP" );
+   lua_pushnumber( L, DISTR::EXP );
+   lua_rawset( L, -3 );
+   lua_pushstring( L, "WEIBULL" );
+   lua_pushnumber( L, DISTR::WEIBULL );
+   lua_rawset( L, -3 );
+
+   // Set this table as __index field for metatable;
+   lua_rawset( L, -3 );
+
+   lua_pushstring( L, "__newindex" );
+   lua_pushcfunction( L, newIndexHandler );
+   lua_rawset( L, -3 );
+
+   // Set metatable to an empty table;
+   lua_setmetatable( L, -2 );
+
+   // Register this table;
+   lua_setglobal( L, "DISTR" );
    };

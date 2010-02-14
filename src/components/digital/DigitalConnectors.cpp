@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -18,58 +18,22 @@
  ***************************************************************************/
 
 
-#include "components/abstract/AbstractActivators.h"
+#include "components/digital/DigitalConnectors.h"
 
 
 /***************************************************************************
- *   AbstractActivators class implementation                               *
+ *   DigitalConnectors class implementation                                *
  ***************************************************************************/
 
 
-AbstractActivators::AbstractActivators(
-   unsigned int count,
-   ActivationFunction * activationFunction
-   )
-   : KernelObject()
+DigitalConnectors::DigitalConnectors( unsigned int count )
+   : ComponentsSet < double >::ComponentsSet( count )
    {
-   this->numNonLinearElements = count;
-
-   if ( count > 0 )
-      {
-      this->analogSignals = new double[ count ];
-      }
-   else
-      {
-      this->analogSignals = NULL;
-      }
-
-   this->activationFunction = activationFunction;
-   if ( activationFunction != NULL ) activationFunction->capture();
+   // Do nothing;
    };
 
 
-AbstractActivators::~AbstractActivators()
+DigitalConnectors::~DigitalConnectors()
    {
-   if ( analogSignals != NULL ) delete[] analogSignals;
-
-   // Release captured object;
-   if ( activationFunction != NULL ) activationFunction->release();
-   };
-
-
-void AbstractActivators::setSignal( unsigned int index, double signal )
-   {
-   this->analogSignals[ index ] = signal;
-   };
-
-
-double AbstractActivators::getSignal( unsigned int index ) const
-   {
-   return this->activationFunction->evaluateFunction( this->analogSignals[ index ] );
-   };
-
-
-double AbstractActivators::evaluateDerivative( double x )
-   {
-   return this->activationFunction->evaluateDerivative( x );
+   // Do nothing;
    };

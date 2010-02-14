@@ -1,4 +1,4 @@
---   Copyright (C) 2009 Andrew Timashov
+--   Copyright (C) 2009, 2010 Andrew Timashov
 --
 --   This file is part of NeuroWombat.
 --
@@ -90,7 +90,7 @@ function estimateComponentImportance( t, times, engine, testFunc, manager, intSr
    end
 
 
-function estimateTimeToFailDestribution( times, engine, testFunc )
+function estimateTimeToFailDistribution( times, engine, testFunc )
    local d = {};
    for i = 1, times do
       repeat
@@ -106,16 +106,18 @@ function estimateTimeToFailDestribution( times, engine, testFunc )
    end
 
 
-function estimateFaultsCountDestribution( times, engine, testFunc, manager )
+function estimateFaultsCountDistribution( times, engine, testFunc, managers )
    local d = {};
-   local componentsCount = getIntSourcesCount( manager );
+   local componentsCount = 0;
+   for i = 1, #managers do componentsCount = componentsCount + getIntSourcesCount( managers[ i ] ) end
    for i = 0, componentsCount do d[ i ] = 0 end
    for i = 1, times do
       repeat
          if not testFunc() then break end
          until not stepOverEngine( engine )
 
-      local faultsCount = getInterruptsCount( manager );
+      local faultsCount = 0;
+      for j = 1, #managers do faultsCount = faultsCount + getInterruptsCount( managers[ j ] ) end
       d[ faultsCount ] = d[ faultsCount ] + 1;
       restartEngine( engine );
       end

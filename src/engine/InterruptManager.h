@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -23,7 +23,7 @@
 
 
 #include "kernel/KernelObject.h"
-#include "math/Destribution.h"
+#include "math/Distribution.h"
 
 
 /***************************************************************************
@@ -36,8 +36,8 @@ class InterruptManager : public KernelObject
    public:
       InterruptManager(
          unsigned int intSourcesCount,
-         bool unlimitRegeneration,
-         Destribution * destribution
+         bool unlimitedRegeneration,
+         Distribution * distribution
          );
 
       virtual ~InterruptManager();
@@ -72,8 +72,8 @@ class InterruptManager : public KernelObject
       int intSource;
       int lastIntSource;
 
-      bool unlimitRegeneration;
-      Destribution * destribution;
+      bool unlimitedRegeneration;
+      Distribution * distribution;
    };
 
 

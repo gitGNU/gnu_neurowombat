@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -27,93 +27,13 @@
 
 
 AnalogWires::AnalogWires( unsigned int count )
-   : KernelObject()
+   : ComponentsSet < double >::ComponentsSet( count )
    {
-   this->numWires = count;
-
-   if ( count > 0 )
-      {
-      this->electricPotentials = new double[ count ];
-      }
-   else
-      {
-      this->electricPotentials = NULL;
-      }
+   // Do nothing;
    };
 
 
 AnalogWires::~AnalogWires()
    {
-   if ( this->electricPotentials != NULL ) delete[] this->electricPotentials;
-   };
-
-
-unsigned int AnalogWires::count() const
-   {
-   return this->numWires;
-   };
-
-
-void AnalogWires::copyPotential( unsigned int destIndex, unsigned int srcIndex )
-   {
-   this->electricPotentials[ destIndex ] = this->electricPotentials[ srcIndex ];
-   };
-
-
-void AnalogWires::setPotential( unsigned int index, double potential )
-   {
-   this->electricPotentials[ index ] = potential;
-   };
-
-
-double AnalogWires::getPotential( unsigned int index ) const
-   {
-   return this->electricPotentials[ index ];
-   };
-
-
-/***************************************************************************
- *   AnalogWiresManager class implementation                               *
- ***************************************************************************/
-
-
-/*AnalogWiresManager::AnalogWiresManager()
-   : InterruptManager()
-   {
    // Do nothing;
    };
-
-
-AnalogWiresManager::AnalogWiresManager(
-   Destribution & destribution,
-   AnalogWires * analogWires
-   )
-   : InterruptManager(
-      ( analogWires != NULL ) ? analogWires->getNumWires() : 0,
-      false,
-      destribution,
-      analogWires
-      )
-   {
-   // Do nothing;
-   };
-
-
-AnalogWiresManager::~AnalogWiresManager()
-   {
-   // Do nothing;
-   };
-
-
-void AnalogWiresManager::handleInterrupt()
-   {
-   // Break up wire;
-   int wireIndex = this->getIntSource();
-   if ( wireIndex >= 0 && this->entity != NULL )
-      {
-      ( ( AnalogWires * ) this->entity )->breakWire( wireIndex );
-      }
-
-   // Pass control to base implementation;
-   InterruptManager::handleInterrupt();
-   };*/

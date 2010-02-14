@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 
-#define NEUROWOMBAT_VERSION "0.1"
+#define NEUROWOMBAT_VERSION "1.0.0-rc1"
 
 
 #define NEUROWOMBAT_OPTIONS "\
@@ -27,17 +27,15 @@
 
 
 #define COPYING "\
-Copyright (C) 2009 Andrew Timashov\n\
+Copyright (C) 2009, 2010 Andrew Timashov\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law."
 
 
-
 #include <stdio.h>
 #include <cstdlib>
 #include <string.h>
-//#include <time.h>
 
 
 #include "kernel/Kernel.h"
@@ -72,16 +70,6 @@ int main( int argc, char ** argv )
       }
 
    kernel = Kernel::instance();
-
-   /*struct timespec tp;
-   clock_gettime( CLOCK_REALTIME, & tp );
-   time_t seconds = tp.tv_sec;
-   long nanoseconds = tp.tv_nsec;*/
    kernel->doFile( argv[ 1 ] );
-   /*clock_gettime( CLOCK_REALTIME, & tp );
-   seconds = tp.tv_sec - seconds;
-   nanoseconds = tp.tv_nsec - nanoseconds;
-   printf( "seconds = %i\nmicroseconds = %li\n", seconds, nanoseconds / 1000 );*/
-
    kernel->freeInstance();
    };

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -18,23 +18,25 @@
  ***************************************************************************/
 
 
-#ifndef ABSTRACTPROCESSOR_H
-#define ABSTRACTPROCESSOR_H
+#ifndef PROCESSINGUNIT_H
+#define PROCESSINGUNIT_H
 
 
 #include "kernel/KernelObject.h"
 #include "objects/CustomFunction.h"
 #include "components/abstract/AbstractConnectors.h"
 #include "components/abstract/AbstractWeights.h"
+#include "components/digital/DigitalConnectors.h"
+#include "components/digital/MemoryModule.h"
 
 
 /***************************************************************************
- *   T_ABSTRACT_PROCESSOR enum declaration                                 *
+ *   T_PROC_UNIT enum declaration                                          *
  ***************************************************************************/
 
-namespace ABSTRACT_PROCESSOR
+namespace PROC_UNIT
    {
-   enum T_ABSTRACT_PROCESSOR
+   enum T_PROC_UNIT
       {
       CUSTOM,
       RADIAL_BASIS,
@@ -67,15 +69,15 @@ inline double useCoefficient( COEFF_USAGE::T_COEFF_USAGE coeffUsage, double x, d
 
 
 /***************************************************************************
- *   AbstractProcessor abstract class declaration                          *
+ *   ProcessingUnit abstract class declaration                             *
  ***************************************************************************/
 
 
-class AbstractProcessor : public KernelObject
+class ProcessingUnit : public KernelObject
    {
    public:
-      AbstractProcessor();
-      virtual ~AbstractProcessor();
+      ProcessingUnit();
+      virtual ~ProcessingUnit();
 
       virtual double process(
          unsigned int inputsCount,
@@ -85,19 +87,28 @@ class AbstractProcessor : public KernelObject
          AbstractWeights * weights,
          unsigned int weightsBaseIndex
          ) = 0;
+
+      virtual double process(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         DigitalConnectors * connectors,
+         MemoryModule * memory,
+         unsigned int memoryBaseIndex
+         ) = 0;
    };
 
 
 /***************************************************************************
- *   AbstractCustomProcessor class declaration                             *
+ *   CustomProcessingUnit class declaration                                *
  ***************************************************************************/
 
 
-class AbstractCustomProcessor : public AbstractProcessor
+class CustomProcessingUnit : public ProcessingUnit
    {
    public:
-      AbstractCustomProcessor( CustomFunction * processingFunc );
-      virtual ~AbstractCustomProcessor();
+      CustomProcessingUnit( CustomFunction * processingFunc );
+      CustomProcessingUnit( CustomProcessingUnit & other );
+      virtual ~CustomProcessingUnit();
 
       virtual double process(
          unsigned int inputsCount,
@@ -106,6 +117,14 @@ class AbstractCustomProcessor : public AbstractProcessor
          double * builtInWeights,
          AbstractWeights * weights,
          unsigned int weightsBaseIndex
+         );
+
+      virtual double process(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         DigitalConnectors * connectors,
+         MemoryModule * memory,
+         unsigned int memoryBaseIndex
          );
 
    private:
@@ -114,15 +133,15 @@ class AbstractCustomProcessor : public AbstractProcessor
 
 
 /***************************************************************************
- *   AbstractRadialBasisProcessor class declaration                        *
+ *   RadialBasisProcessingUnit class declaration                           *
  ***************************************************************************/
 
 
-class AbstractRadialBasisProcessor : public AbstractProcessor
+class RadialBasisProcessingUnit : public ProcessingUnit
    {
    public:
-      AbstractRadialBasisProcessor( COEFF_USAGE::T_COEFF_USAGE coeffUsage );
-      virtual ~AbstractRadialBasisProcessor();
+      RadialBasisProcessingUnit( COEFF_USAGE::T_COEFF_USAGE coeffUsage );
+      virtual ~RadialBasisProcessingUnit();
 
       virtual double process(
          unsigned int inputsCount,
@@ -131,6 +150,14 @@ class AbstractRadialBasisProcessor : public AbstractProcessor
          double * builtInWeights,
          AbstractWeights * weights,
          unsigned int weightsBaseIndex
+         );
+
+      virtual double process(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         DigitalConnectors * connectors,
+         MemoryModule * memory,
+         unsigned int memoryBaseIndex
          );
 
    private:
@@ -139,15 +166,15 @@ class AbstractRadialBasisProcessor : public AbstractProcessor
 
 
 /***************************************************************************
- *   AbstractScalarProcessor class declaration                             *
+ *   ScalarProcessingUnit class declaration                                *
  ***************************************************************************/
 
 
-class AbstractScalarProcessor : public AbstractProcessor
+class ScalarProcessingUnit : public ProcessingUnit
    {
    public:
-      AbstractScalarProcessor();
-      virtual ~AbstractScalarProcessor();
+      ScalarProcessingUnit();
+      virtual ~ScalarProcessingUnit();
 
       virtual double process(
          unsigned int inputsCount,
@@ -157,19 +184,27 @@ class AbstractScalarProcessor : public AbstractProcessor
          AbstractWeights * weights,
          unsigned int weightsBaseIndex
          );
+
+      virtual double process(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         DigitalConnectors * connectors,
+         MemoryModule * memory,
+         unsigned int memoryBaseIndex
+         );
    };
 
 
 /***************************************************************************
- *   AbstractWeightedSumProcessor class declaration                        *
+ *   WeightedSumProcessingUnit class declaration                           *
  ***************************************************************************/
 
 
-class AbstractWeightedSumProcessor : public AbstractProcessor
+class WeightedSumProcessingUnit : public ProcessingUnit
    {
    public:
-      AbstractWeightedSumProcessor();
-      virtual ~AbstractWeightedSumProcessor();
+      WeightedSumProcessingUnit();
+      virtual ~WeightedSumProcessingUnit();
 
       virtual double process(
          unsigned int inputsCount,
@@ -178,6 +213,14 @@ class AbstractWeightedSumProcessor : public AbstractProcessor
          double * builtInWeights,
          AbstractWeights * weights,
          unsigned int weightsBaseIndex
+         );
+
+      virtual double process(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         DigitalConnectors * connectors,
+         MemoryModule * memory,
+         unsigned int memoryBaseIndex
          );
    };
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -26,6 +26,7 @@
 
 
 #include "neurons/abstract/AbstractNeuron.h"
+#include "neurons/analog/AnalogNeuron.h"
 
 
 /***************************************************************************
@@ -90,6 +91,35 @@ class AbstractNeuronsOdeSystem : public OdeSystem
    private:
       std::vector < AbstractNeuron * > * neurons;
       double timeConstant;
+   };
+
+
+/***************************************************************************
+ *   AnalogLimNeuronsOdeSystem class declaration                           *
+ ***************************************************************************/
+
+
+class AnalogLimNeuronsOdeSystem : public OdeSystem
+   {
+   public:
+      AnalogLimNeuronsOdeSystem(
+         std::vector < AnalogNeuron * > * neurons
+         );
+
+      virtual ~AnalogLimNeuronsOdeSystem();
+
+      virtual double evaluateOdeFunction( unsigned int index );
+
+      virtual void setDependentVariable( unsigned int index, double x );
+      virtual void incDependentVariable( unsigned int index, double x );
+      virtual void incDependentVariables( double * x1, double * x2, double k1, double k2 );
+
+   protected:
+      AnalogLimNeuronsOdeSystem();
+      AnalogLimNeuronsOdeSystem( AnalogLimNeuronsOdeSystem & other );
+
+   private:
+      std::vector < AnalogNeuron * > * neurons;
    };
 
 

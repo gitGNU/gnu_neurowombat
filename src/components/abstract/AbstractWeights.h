@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -22,7 +22,7 @@
 #define ABSTRACTWEIGHTS_H
 
 
-#include "kernel/KernelObject.h"
+#include "components/ComponentsSet.h"
 #include "engine/InterruptManager.h"
 #include "objects/CustomFunction.h"
 
@@ -32,21 +32,11 @@
  ***************************************************************************/
 
 
-class AbstractWeights : public KernelObject
+class AbstractWeights : public ComponentsSet < double >
    {
    public:
       AbstractWeights( unsigned int count = 0 );
       virtual ~AbstractWeights();
-
-      unsigned int count() const;
-
-      void setWeight( unsigned int index, double weight );
-      void incWeight( unsigned int index, double weight );
-      double getWeight( unsigned int index ) const;
-
-   private:
-      unsigned int numWeights;
-      double * weights;
    };
 
 
@@ -60,7 +50,7 @@ class AbstractWeightsManager : public InterruptManager
    public:
       AbstractWeightsManager();
       AbstractWeightsManager(
-         Destribution * destribution,
+         Distribution * distribution,
          AbstractWeights * abstractWeights,
          CustomFunction * fixFunction
          );
@@ -74,7 +64,7 @@ class AbstractWeightsManager : public InterruptManager
    private:
       AbstractWeights * abstractWeights;
       CustomFunction * fixFunction;
-      double * weightsBackup;
+      double * backup;
    };
 
 

@@ -1,4 +1,4 @@
---   Copyright (C) 2009 Andrew Timashov
+--   Copyright (C) 2009, 2010 Andrew Timashov
 --
 --   This file is part of NeuroWombat.
 --
@@ -14,6 +14,7 @@
 --
 --   You should have received a copy of the GNU General Public License
 --   along with NeuroWombat.  If not, see <http://www.gnu.org/licenses/>.
+
 
 require "abstract.ProbabilisticNetwork";
 require "reliability";
@@ -55,8 +56,6 @@ function testNetwork()
    return ( hitsCount >= 90 );
 end
 
-print( "API version: " .. apiVersion() );
-
 inputs = 3;
 classes = 3;
 clusters = { { 20, 20, 20 }, { 50, 50, 50 }, { 90, 90, 90 } };
@@ -72,44 +71,44 @@ io.write( "Training ... " ); io.flush();
 abstract.ProbabilisticNetwork.train( net, trainVectors );
 print( "[OK]" );
 
--- Test results;
-vectors = { { 10, 10, 10 }, { 55, 45, 56 }, { 90, 87, 92 }, { 15, 20, 25 }, { 43, 54, 58 }, { 88, 95, 79 } };
-for i = 1, #vectors do
-   winner = abstract.ProbabilisticNetwork.compute( net, vectors[ i ] );
-   print( "{ " .. vectors[ i ][ 1 ] .. ", " .. vectors[ i ][ 2 ] .. ", " .. vectors[ i ][ 3 ] .. " } => " .. winner );
+-- Simulate probabilistic network;
+print( "Choose the option to do:\n1) Visualize results\n2) Estimate time to fail\n3) Estimate survival function\n4) Estimate component importance\n5) Estimate time to fail distribution\n6) Estimate faults count distribution\n7) Exit" );
+while true do
+   op = tonumber( io.read() );
+   if op ~= nil then if op >= 1 and op <= 7 then break end end
    end
 
--- Simulate probabilistic network;
-print( "Choose the option to do:\n1) Estimate time to fail\n2) Estimate survival function\n3) Estimate component importance\n4) Estimate time to fail destribution\n5) Estimate faults count destribution\n6) Exit" );
-op = 0;
-repeat
-   local ops = io.read();
-   if ops == "1" or ops == "2" or ops == "3" or ops == "4" or ops == "5" or ops == "6" then op = tonumber( ops ) end
-   until op ~= 0
+if op == 1 then
+   vectors = { { 10, 10, 10 }, { 55, 45, 56 }, { 90, 87, 92 }, { 15, 20, 25 }, { 43, 54, 58 }, { 88, 95, 79 } };
+   for i = 1, #vectors do
+      winner = abstract.ProbabilisticNetwork.compute( net, vectors[ i ] );
+      print( "{ " .. vectors[ i ][ 1 ] .. ", " .. vectors[ i ][ 2 ] .. ", " .. vectors[ i ][ 3 ] .. " } => " .. winner );
+      end
 
-if op >= 1 and op <= 5 then
+elseif op >= 2 and op <= 6 then
+   op = op - 1;
    print( "Start simulation..." );
-   lengths = { 10, 10, 10 };
+   lengths = { 10, 10, 5 };
    intervals = { { 0.00001, 0.0001 }, { 0.0, 8000.0 }, { 0.0, 8000.0 } };
 
    if op == 1 then
       delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
       for i = 0, lengths[ op ] - 1 do
          x = intervals[ op ][ 1 ] + i * delta;
-         destr = createExponentialDestribution( x );
-         manager = createAbstractWeightsManager( destr, net.weights, nil );
+         distr = createDistribution( DISTR.EXP, x );
+         manager = createInterruptManager( net.weights, distr, nil );
          engine = createSimulationEngine();
          appendInterruptManager( engine, manager );
          y, dyl, dyh = reliability.estimateTimeToFail( 1000, engine, testNetwork );
          print( x * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
          closeId( engine );
          closeId( manager );
-         closeId( destr );
+         closeId( distr );
          end
 
    elseif op >= 2 and op <= 5 then
-      destr = createExponentialDestribution( 0.0001 );
-      manager = createAbstractWeightsManager( destr, net.weights, nil );
+      distr = createDistribution( DISTR.EXP, 0.0001 );
+      manager = createInterruptManager( net.weights, distr, nil );
       engine = createSimulationEngine();
       appendInterruptManager( engine, manager );
       if op == 2 then
@@ -129,16 +128,16 @@ if op >= 1 and op <= 5 then
             end
 
       elseif op == 4 then
-         x = reliability.estimateTimeToFailDestribution( 200, engine, testNetwork );
+         x = reliability.estimateTimeToFailDistribution( 200, engine, testNetwork );
          for i = 1, #x do print( x[ i ] / 1000 .. ", " ) end
       elseif op == 5 then
-         x = reliability.estimateFaultsCountDestribution( 200, engine, testNetwork, manager );
+         x = reliability.estimateFaultsCountDistribution( 200, engine, testNetwork, { manager } );
          for i = 0, net.weightsCount do print( x[ i ] .. ", " ) end
          end
 
       closeId( engine );
       closeId( manager );
-      closeId( destr );
+      closeId( distr );
       end
    end
 

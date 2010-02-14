@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -18,56 +18,23 @@
  ***************************************************************************/
 
 
-#ifndef ABSTRACTBUFFERS_H
-#define ABSTRACTBUFFERS_H
+#ifndef DIGITALCONNECTORS_H
+#define DIGITALCONNECTORS_H
 
 
-#include "kernel/KernelObject.h"
-#include "engine/InterruptManager.h"
-
-
-/***************************************************************************
- *   AbstractBuffers class declaration                                     *
- ***************************************************************************/
-
-
-class AbstractBuffers : public KernelObject
-   {
-   public:
-      AbstractBuffers( unsigned int count = 0 );
-      virtual ~AbstractBuffers();
-
-      unsigned int count() const;
-
-      void setBuffer( unsigned int index, double buffer );
-      double getBuffer( unsigned int index ) const;
-
-   private:
-      unsigned int numBuffers;
-      double * buffers;
-   };
+#include "components/ComponentsSet.h"
 
 
 /***************************************************************************
- *   AbstractBuffersManager class declaration                              *
+ *   DigitalConnectors class declaration                                   *
  ***************************************************************************/
 
 
-class AbstractBuffersManager : public InterruptManager
+class DigitalConnectors : public ComponentsSet < double >
    {
    public:
-      AbstractBuffersManager();
-      AbstractBuffersManager(
-         Destribution * destribution,
-         AbstractBuffers * abstractBuffers
-         );
-
-      virtual ~AbstractBuffersManager();
-
-      virtual void handleInterrupt();
-
-   private:
-      AbstractBuffers * abstractBuffers;
+      DigitalConnectors( unsigned int count = 0 );
+      virtual ~DigitalConnectors();
    };
 
 

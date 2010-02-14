@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -18,37 +18,53 @@
  ***************************************************************************/
 
 
-#ifndef ABSTRACTACTIVATORS_H
-#define ABSTRACTACTIVATORS_H
+#ifndef MEMORYMODULE_H
+#define MEMORYMODULE_H
 
 
-#include "kernel/KernelObject.h"
-#include "math/ActivationFunction.h"
+#include "components/ComponentsSet.h"
+#include "engine/InterruptManager.h"
+#include "objects/CustomFunction.h"
 
 
 /***************************************************************************
- *   AbstractActivators class declaration                                  *
+ *   MemoryModule class declaration                                        *
  ***************************************************************************/
 
 
-class AbstractActivators : public KernelObject
+class MemoryModule : public ComponentsSet < double >
    {
    public:
-      AbstractActivators(
-         unsigned int count = 0,
-         ActivationFunction * activationFunction = NULL
+      MemoryModule( unsigned int count = 0 );
+      virtual ~MemoryModule();
+   };
+
+
+/***************************************************************************
+ *   MemoryModuleManager class declaration                                 *
+ ***************************************************************************/
+
+
+class MemoryModuleManager : public InterruptManager
+   {
+   public:
+      MemoryModuleManager();
+      MemoryModuleManager(
+         Distribution * distribution,
+         MemoryModule * memoryModule,
+         CustomFunction * fixFunction
          );
-      ~AbstractActivators();
 
-      void setSignal( unsigned int index, double signal );
-      double getSignal( unsigned int index ) const;
+      virtual ~MemoryModuleManager();
 
-      double evaluateDerivative( double x );
+      virtual void simulateInterrupt( unsigned int intSource );
+      virtual void handleInterrupt();
+      virtual void reinit();
 
    private:
-      unsigned int numNonLinearElements;
-      double * analogSignals;
-      ActivationFunction * activationFunction;
+      MemoryModule * memoryModule;
+      CustomFunction * fixFunction;
+      double * backup;
    };
 
 

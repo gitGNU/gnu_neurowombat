@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -43,10 +43,13 @@ extern "C" int newIndexHandler( lua_State * L );
 inline void registerActivationFunctions( lua_State * L );
 
 
-inline void registerAbstractProcessors( lua_State * L );
+inline void registerProcessingUnits( lua_State * L );
 
 
 inline void registerCoefficientUsage( lua_State * L );
+
+
+inline void registerDistributions( lua_State * L );
 
 
 #endif

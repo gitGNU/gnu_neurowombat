@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -28,8 +28,8 @@
 
 InterruptManager::InterruptManager(
    unsigned int intSourcesCount,
-   bool unlimitRegeneration,
-   Destribution * destribution
+   bool unlimitedRegeneration,
+   Distribution * distribution
    )
    {
    // Clear interrupts counter;
@@ -50,18 +50,18 @@ InterruptManager::InterruptManager(
       this->intSourcesCount = intSourcesCount;
 
       // Set regeneration limit;
-      this->unlimitRegeneration = unlimitRegeneration;
+      this->unlimitedRegeneration = unlimitedRegeneration;
 
-      // Copy destribution;
-      this->destribution = destribution;
+      // Copy distribution;
+      this->distribution = distribution;
 
       // Capture object;
-      if ( destribution != NULL ) destribution->capture();
+      if ( distribution != NULL ) distribution->capture();
 
       // Generate interrupts;
       for ( int i = 0; i < intSourcesCount; i ++ )
          {
-         this->interrupts[ i ] = this->destribution->generateTime();
+         this->interrupts[ i ] = this->distribution->generateTime();
          }
 
       // Clear int source;
@@ -75,8 +75,8 @@ InterruptManager::InterruptManager(
       this->intSourcesCount = 0;
       this->intSource = -1;
       this->lastIntSource = -1;
-      this->unlimitRegeneration = false;
-      this->destribution = NULL;
+      this->unlimitedRegeneration = false;
+      this->distribution = NULL;
       }
    };
 
@@ -87,7 +87,7 @@ InterruptManager::~InterruptManager()
    if ( this->interrupts != NULL ) delete[] this->interrupts;
 
    // Release captured object;
-   if ( this->destribution != NULL ) this->destribution->release();
+   if ( this->distribution != NULL ) this->distribution->release();
    };
 
 
@@ -125,10 +125,10 @@ void InterruptManager::handleInterrupt()
    {
    if ( this->intSource >= 0 )
       {
-      if ( this->unlimitRegeneration )
+      if ( this->unlimitedRegeneration )
          {
          // Generate new interrupt for current source;
-         this->interrupts[ this->intSource ] = this->destribution->generateTime();
+         this->interrupts[ this->intSource ] = this->distribution->generateTime();
          }
       else
          {
@@ -153,7 +153,7 @@ void InterruptManager::reinit()
    // Generate interrupts;
    for ( int i = 0; i < intSourcesCount; i ++ )
       {
-      this->interrupts[ i ] = this->destribution->generateTime();
+      this->interrupts[ i ] = this->distribution->generateTime();
       }
 
    // Clear int source;

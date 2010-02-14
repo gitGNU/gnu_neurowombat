@@ -1,4 +1,4 @@
-README for NeuroWombat 0.0.1
+README for NeuroWombat 1.0.0-rc1
 
 NeuroWombat is an artificial neural network reliability simulator. 
 It's primary purpose is to gain a better understanding of the 
@@ -14,5 +14,5 @@ This program is free software. It is published under GNU General
 Public License v3 or later. See the license for more details.
 
 
-Copyright (C) 2009 Andrew Timashov
+Copyright (C) 2009, 2010 Andrew Timashov
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -24,11 +24,10 @@
 
 #include "exceptions.h"
 #include "kernel/KernelObject.h"
-#include "components/abstract/AbstractActivators.h"
-#include "components/abstract/AbstractBuffers.h"
 #include "components/abstract/AbstractConnectors.h"
-#include "components/abstract/AbstractProcessor.h"
 #include "components/abstract/AbstractWeights.h"
+#include "math/ActivationFunction.h"
+#include "math/ProcessingUnit.h"
 
 
 /***************************************************************************
@@ -66,25 +65,10 @@ class AbstractNeuron : public KernelObject
          unsigned int connectorsBaseIndex,
          AbstractWeights * weights,
          unsigned int weightsBaseIndex,
-         AbstractBuffers * buffers,
-         unsigned int buffersBaseIndex,
-         AbstractProcessor * processor,
+         ProcessingUnit * processingUnit,
          ActivationFunction * activationFunction
          );
 
-      AbstractNeuron(
-         unsigned int inputsCount,
-         unsigned int * inputConnectors,
-         AbstractConnectors * connectors,
-         unsigned int connectorsBaseIndex,
-         AbstractWeights * weights,
-         unsigned int weightsBaseIndex,
-         AbstractBuffers * buffers,
-         unsigned int buffersBaseIndex,
-         AbstractProcessor * processor,
-         AbstractActivators * activators,
-         unsigned int activatorsBaseIndex
-         );
       virtual ~AbstractNeuron();
 
       unsigned int getInputsCount() const;
@@ -95,7 +79,7 @@ class AbstractNeuron : public KernelObject
       double getOutput();
 
       double leftCompute();
-      void rightCompute( double processorOut );
+      void rightCompute( double processingUnitOut );
       void compute();
 
       void createDampingBuffers();
@@ -109,20 +93,7 @@ class AbstractNeuron : public KernelObject
       AbstractNeuron();
       AbstractNeuron( const AbstractNeuron & other );
 
-
    private:
-      inline void sharedConstructor(
-         unsigned int inputsCount,
-         unsigned int * inputConnectors,
-         AbstractConnectors * connectors,
-         unsigned int connectorsBaseIndex,
-         AbstractWeights * weights,
-         unsigned int weightsBaseIndex,
-         AbstractBuffers * buffers,
-         unsigned int buffersBaseIndex,
-         AbstractProcessor * processor
-         );
-
       unsigned int inputsCount;
       unsigned int * inputConnectors;
 
@@ -133,18 +104,12 @@ class AbstractNeuron : public KernelObject
       AbstractWeights * weights;
       unsigned int weightsBaseIndex;
 
-      unsigned int builtInBuffersCount;
       double * builtInBuffers;
-      AbstractBuffers * buffers;
-      unsigned int buffersBaseIndex;
 
+      ProcessingUnit * processingUnit;
       ActivationFunction * activationFunction;
-      AbstractActivators * activators;
-      unsigned int activatorsBaseIndex;
 
-      AbstractProcessor * processor;
-
-      double processorOut;
+      double processingUnitOut;
       double delta;
    };
 

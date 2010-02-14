@@ -18,44 +18,84 @@
  ***************************************************************************/
 
 
+#ifndef COMPONENTSSET_H
+#define COMPONENTSSET_H
+
+
 #include "kernel/KernelObject.h"
 
 
-#include <stdio.h>
-#include <typeinfo>
-
-
 /***************************************************************************
- *   KernelObject abstract class implementation                            *
+ *   ComponentsSet class declaration                                       *
  ***************************************************************************/
 
 
-KernelObject::KernelObject()
-   {
-   this->referenceCount = 0;
-   };
-
-
-KernelObject::~KernelObject()
-   {
-   // Do nothing;
-   };
-
-
-void KernelObject::capture()
-   {
-   this->referenceCount ++;
-   };
-
-
-void KernelObject::release()
-   {
-   this->referenceCount --;
-   if ( this->referenceCount == 0 )
+template < class T >
+   class ComponentsSet : public KernelObject
       {
-      //char str[ 256 ];
-      //sprintf( str, "Object %s has been deleted", typeid( * this ).name() );
-      delete this;
-      //printf( "%s\n", str );
+      public:
+         ComponentsSet( unsigned int count = 0 );
+         virtual ~ComponentsSet();
+
+         T & operator []( unsigned int index );
+         T & at( unsigned int index );
+
+         unsigned int count() const;
+
+      protected:
+         unsigned int propertiesCount;
+         T * properties;
+      };
+
+
+/***************************************************************************
+ *   ComponentsSet class implementation                                    *
+ ***************************************************************************/
+
+
+template < class T >
+ComponentsSet < T >::ComponentsSet( unsigned int count )
+   : KernelObject()
+   {
+   propertiesCount = count;
+
+   if ( count > 0 )
+      {
+      properties = new T[ count ];
+      }
+   else
+      {
+      properties = NULL;
       }
    };
+
+
+template < class T >
+   ComponentsSet < T >::~ComponentsSet()
+      {
+      if ( properties != NULL ) delete[] properties;
+      };
+
+
+template < class T >
+   T & ComponentsSet < T >::operator []( unsigned int index )
+      {
+      return properties[ index ];
+      };
+
+
+template < class T >
+   T & ComponentsSet < T >::at( unsigned int index )
+      {
+      return properties[ index ];
+      };
+
+
+template < class T >
+   unsigned int ComponentsSet < T >::count() const
+      {
+      return propertiesCount;
+      };
+
+
+#endif

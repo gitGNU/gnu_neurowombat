@@ -1,4 +1,4 @@
---   Copyright (C) 2009 Andrew Timashov
+--   Copyright (C) 2009, 2010 Andrew Timashov
 --
 --   This file is part of NeuroWombat.
 --
@@ -16,21 +16,6 @@
 --   along with NeuroWombat.  If not, see <http://www.gnu.org/licenses/>.
 
 
--- Hopfield neural network script ( 16 neurons ). Network task is to 
--- classify 4x4 images. It works as associative memory and returns one 
--- of the base images for every input image. There are 2 base images:
--- ####     ....
--- #### and ....
--- ....     ####
--- ....     ####
--- Network has to perform at least 90% correct classification for 100
--- random images like
--- ###.     ..##
--- #### or  ....
--- ....     #.##
--- #..#     ###.
--- Otherwise it is considered to be in a fault state.
-
 require "analog.HopfieldNetwork";
 require "reliability";
 
@@ -38,14 +23,14 @@ require "reliability";
 function testNetwork()
    local x = {};
    local hitsCount = 0;
-   local totalCount = 100;
+   local totalCount = 10;
 
-   -- Generate bottom "1" pattern for i <= 50 and top "1" pattern for i > 50;
-   for i = 1, 100 do
+   -- Generate bottom "1" pattern for i <= 5 and top "1" pattern for i > 5;
+   for i = 1, 10 do
       local bottomPatternCounter = 0;
       local topPatternCounter = 0;
       for j = 1, net.neuronsCount do
-         if ( ( i <= 50 and j <= 8 ) or ( i > 50 and j > 8 ) ) then
+         if ( ( i <= 5 and j <= 8 ) or ( i > 5 and j > 8 ) ) then
             if math.random ( 4 ) == 1 then x[ j ] = 1.0;
             else x[ j ] = -1.0; end
          else
@@ -57,7 +42,7 @@ function testNetwork()
          if ( j > 8 and x[ j ] == 1.0 ) then bottomPatternCounter = bottomPatternCounter + 1; end
          end
 
-      local y = analog.HopfieldNetwork.compute( net, x, 4 );
+      local y = analog.HopfieldNetwork.computeC( net, x, 5.0, 250 );
 
       -- Analize result;
       local isTopPatern = true;
@@ -79,10 +64,8 @@ function testNetwork()
          ) then hitsCount = hitsCount + 1; end
       end
 
-   return ( hitsCount / totalCount >= 0.90 );
+   return ( hitsCount / totalCount >= 0.75 );
    end
-
-print( "API version: " .. apiVersion() );
 
 -- Create neurons layer;
 io.write( "Assembling Hopfield network ( 16 neurons ) ... " ); io.flush();
@@ -101,43 +84,67 @@ analog.HopfieldNetwork.train( net, trainVectors );
 print( "[OK]" );
 
 -- Simulate Hopfield network;
-print( "Choose the option to do:\n1) Estimate time to fail\n2) Estimate survival function\n3) Estimate component importance\n4) Estimate time to fail destribution\n5) Estimate faults count destribution\n6) Exit" );
-op = 0;
-repeat
-   local ops = io.read();
-   if ops == "1" or ops == "2" or ops == "3" or ops == "4" or ops == "5" or ops == "6" then op = tonumber( ops ) end
-   until op ~= 0
+print( "Choose the option to do:\n1) Visualize results\n2) Estimate time to fail\n3) Estimate survival function\n4) Estimate component importance\n5) Estimate time to fail distribution\n6) Estimate faults count distribution\n7) Exit" );
+while true do
+   op = tonumber( io.read() );
+   if op ~= nil then if op >= 1 and op <= 7 then break end end
+   end
 
-if op >= 1 and op <= 5 then
+if op == 1 then
+   x = {
+      { 1, -1, 1, 1, -1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, -1 },
+      { -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1 }
+      };
+
+   for i = 1, 2 do
+      y = analog.HopfieldNetwork.computeC( net, x[ i ], 5.0, 250 );
+      for j = 0, 3 do
+         for k = 1, 4 do
+            io.write( y[ j * 4 + k ] .. " " );
+            end
+
+         print( "" );
+         end
+
+      print( "" );
+      end
+
+elseif op >= 2 and op <= 6 then
+   op = op - 1;
    print( "Start simulation..." );
    lengths = { 10, 10, 10 };
-   intervals = { { 0.00001, 0.0001 }, { 0.0, 30000.0 }, { 9000.0, 25000.0 } };
+   intervals = { { 0.00001, 0.0001 }, { 0.0, 10000.0 }, { 0.0, 8000.0 } };
 
    if op == 1 then
       delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
       for i = 0, lengths[ op ] - 1 do
          x = intervals[ op ][ 1 ] + i * delta;
-         destr = createExponentialDestribution( x );
-         manager = createAnalogResistorsManager( destr, net.resistors, nil );
+         distr = createDistribution( DISTR.EXP, x );
+         manager1 = createInterruptManager( net.resistors, distr, nil );
+         manager2 = createInterruptManager( net.capacitors, distr, nil );
          engine = createSimulationEngine();
-         appendInterruptManager( engine, manager );
+         appendInterruptManager( engine, manager1 );
+         appendInterruptManager( engine, manager2 );
          y, dyl, dyh = reliability.estimateTimeToFail( 121, engine, testNetwork );
          print( x * 10000 .. " " .. dyl / 1000 .. " " .. y / 1000 .. " " .. dyh / 1000 );
          closeId( engine );
-         closeId( manager );
-         closeId( destr );
+         closeId( manager2 );
+         closeId( manager1 );
+         closeId( distr );
          end
 
    elseif op >= 2 and op <= 5 then
-      destr = createExponentialDestribution( 0.0001 );
-      manager = createAnalogResistorsManager( destr, net.resistors, nil );
+      distr = createDistribution( DISTR.EXP, 0.0001 );
+      manager1 = createInterruptManager( net.resistors, distr, nil );
+      manager2 = createInterruptManager( net.capacitors, distr, nil );
       engine = createSimulationEngine();
-      appendInterruptManager( engine, manager );
+      appendInterruptManager( engine, manager1 );
+      appendInterruptManager( engine, manager2 );
       if op == 2 then
          delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
          for i = 0, lengths[ op ] - 1 do
             x = intervals[ op ][ 1 ] + i * delta;
-            y, dyl, dyh = reliability.estimateSurvivalFunction( x, 500, engine, testNetwork );
+            y, dyl, dyh = reliability.estimateSurvivalFunction( x, 200, engine, testNetwork );
             print( x / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
             end
 
@@ -145,21 +152,22 @@ if op >= 1 and op <= 5 then
          delta = ( intervals[ op ][ 2 ] - intervals[ op ][ 1 ] ) / ( lengths[ op ] - 1 );
          for i = 0, lengths[ op ] - 1 do
             x = intervals[ op ][ 1 ] + i * delta;
-            y, dyl, dyh = reliability.estimateComponentImportance( x, 1000, engine, testNetwork, manager, 0 );
+            y, dyl, dyh = reliability.estimateComponentImportance( x, 200, engine, testNetwork, manager2, 0 );
             print( x / 1000 .. " " .. dyl .. " " .. y .. " " .. dyh );
             end
 
       elseif op == 4 then
-         x = reliability.estimateTimeToFailDestribution( 200, engine, testNetwork );
+         x = reliability.estimateTimeToFailDistribution( 200, engine, testNetwork );
          for i = 1, #x do print( x[ i ] / 1000 .. ", " ) end
       elseif op == 5 then
-         x = reliability.estimateFaultsCountDestribution( 200, engine, testNetwork, manager );
-         for i = 0, net.resistorsCount do print( x[ i ] .. ", " ) end
+         x = reliability.estimateFaultsCountDistribution( 200, engine, testNetwork, { manager1, manager2 } );
+         for i = 0, net.resistorsCount + net.capacitorsCount do print( x[ i ] .. ", " ) end
          end
 
       closeId( engine );
-      closeId( manager );
-      closeId( destr );
+      closeId( manager2 );
+      closeId( manager1 );
+      closeId( distr );
       end
    end
 

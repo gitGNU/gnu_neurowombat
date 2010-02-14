@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -21,43 +21,21 @@
 #include "components/analog/AnalogResistors.h"
 
 
-AnalogResistors::AnalogResistors( unsigned int count )
-   : KernelObject()
-   {
-   this->numResistors = count;
+/***************************************************************************
+ *   AnalogResistors class implementation                                  *
+ ***************************************************************************/
 
-   if ( count > 0 )
-      {
-      this->resistances = new double[ count ];
-      }
-   else
-      {
-      this->resistances = NULL;
-      }
+
+AnalogResistors::AnalogResistors( unsigned int count )
+   : ComponentsSet < double >::ComponentsSet( count )
+   {
+   // Do nothing;
    };
 
 
 AnalogResistors::~AnalogResistors()
    {
-   if ( this->resistances != NULL ) delete[] this->resistances;
-   };
-
-
-unsigned int AnalogResistors::count() const
-   {
-   return this->numResistors;
-   };
-
-
-void AnalogResistors::setResistance( unsigned int index, double resistance )
-   {
-   this->resistances[ index ] = resistance;
-   };
-
-
-double AnalogResistors::getResistance( unsigned int index ) const
-   {
-   return this->resistances[ index ];
+   // Do nothing;
    };
 
 
@@ -74,14 +52,14 @@ AnalogResistorsManager::AnalogResistorsManager()
 
 
 AnalogResistorsManager::AnalogResistorsManager(
-   Destribution * destribution,
+   Distribution * distribution,
    AnalogResistors * analogResistors,
    CustomFunction * fixFunction
    )
    : InterruptManager(
       ( analogResistors != NULL ) ? analogResistors->count() : 0,
       false,
-      destribution
+      distribution
       )
    {
    this->analogResistors = analogResistors;
@@ -94,23 +72,23 @@ AnalogResistorsManager::AnalogResistorsManager(
    if ( fixFunction != NULL )
       {
       fixFunction->capture();
-      resistancesBackup = NULL;
+      backup = NULL;
       }
    else
       {
-      // Create backup for resistances;
-      unsigned int resistancesBackupLength = analogResistors->count();
-      if ( resistancesBackupLength > 0 )
+      // Create backup;
+      unsigned int backupLength = analogResistors->count();
+      if ( backupLength > 0 )
          {
-         resistancesBackup = new double[ resistancesBackupLength ];
-         for ( unsigned int i = 0; i < resistancesBackupLength; i ++ )
+         backup = new double[ backupLength ];
+         for ( unsigned int i = 0; i < backupLength; i ++ )
             {
-            resistancesBackup[ i ] = analogResistors->getResistance( i );
+            backup[ i ] = analogResistors->at( i );
             }
          }
       else
          {
-         resistancesBackup = NULL;
+         backup = NULL;
          }
       }
    };
@@ -122,7 +100,7 @@ AnalogResistorsManager::~AnalogResistorsManager()
    if ( analogResistors != NULL ) analogResistors->release();
    if ( fixFunction != NULL ) fixFunction->release();
 
-   if ( resistancesBackup != NULL ) delete[] resistancesBackup;
+   if ( backup != NULL ) delete[] backup;
    };
 
 
@@ -130,18 +108,18 @@ void AnalogResistorsManager::simulateInterrupt( unsigned int intSource )
    {
    if ( intSource < intSourcesCount && analogResistors != NULL )
       {
-      analogResistors->setResistance( intSource, 0.0 );
+      analogResistors->at( intSource ) = 0.0;
       }
    };
 
 
 void AnalogResistorsManager::handleInterrupt()
    {
-   // Break up wire;
+   // Break up resistor;
    int resistorIndex = getIntSource();
    if ( resistorIndex >= 0 && analogResistors != NULL )
       {
-      analogResistors->setResistance( resistorIndex, 0.0 );
+      analogResistors->at( resistorIndex ) = 0.0;
       }
 
    // Pass control to base implementation;
@@ -163,7 +141,7 @@ void AnalogResistorsManager::reinit()
       // Restore resistances from backup;
       for ( unsigned int i = 0; i < analogResistors->count(); i ++ )
          {
-         analogResistors->setResistance( i, resistancesBackup[ i ] );
+         analogResistors->at( i ) = backup[ i ];
          }
       }
    };

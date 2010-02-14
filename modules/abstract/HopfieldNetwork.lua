@@ -24,38 +24,27 @@ function create( neurons )
    network.inputs = neurons;
    network.neuronsCount = neurons;
    network.neurons = {};
-   network.capacitorsCount = 2 * neurons;
-   network.capacitors = createAnalogCapacitors( network.capacitorsCount );
-   network.comparatorsCount = neurons;
-   network.comparators = createAnalogComparators( network.comparatorsCount );
-   network.resistorsCount = neurons * ( neurons - 1 ) * 2;
-   network.resistors = createAnalogResistors( network.resistorsCount );
-   network.wiresCount = 2 + neurons;
-   network.wires = createAnalogWires( network.wiresCount );
+   network.actFunc = createActFunc( ACT_FUNC.LIM, 0.0, -1.0, 1.0 );
+   network.connectorsCount = 2 + neurons;
+   network.connectors = createAbstractConnectors( network.connectorsCount );
+   network.weightsCount = neurons * ( neurons - 1 );
+   network.weights = createAbstractWeights( network.weightsCount );
+   network.procUnit = createProcUnit( PROC_UNIT.WEIGHTED_SUM );
 
-   -- Set potentials for src and gnd wires;
-   setPotentials( network.wires, 0, { 0.0, 1.0 } );
-
-   -- Set capacitances for network capacitors;
-   local capacitances = {};
-   for i = 1, network.capacitorsCount do capacitances[ i ] = 1.0 end
-   setAnalogCapacitances( network.capacitors, 0, capacitances );
-
-   local inputWires = {};
+   local inputConnectors = {};
    for i = 0, neurons - 1 do
       for j = 0, neurons - 2 do
-         if j >= i then inputWires[ j + 1 ] = j + 3
-         else inputWires[ j + 1 ] = j + 2 end
+         if j >= i then inputConnectors[ j + 1 ] = j + 1
+         else inputConnectors[ j + 1 ] = j end
          end
 
-      network.neurons[ i + 1 ] = createAnalogNeuron(
+      network.neurons[ i + 1 ] = createAbstractNeuron(
          neurons - 1,
-         inputWires,
-         0, 1,
-         network.capacitors, i * 2,
-         network.comparators, i,
-         network.resistors, ( neurons - 1 ) * i * 2,
-         network.wires, 2 + i
+         inputConnectors,
+         network.connectors, i,
+         network.weights, ( neurons - 1 ) * i,
+         network.procUnit,
+         network.actFunc
          );
       end
 
@@ -68,10 +57,10 @@ function destroy( network )
       closeId( network.neurons[ i ] );
       end
 
-   closeId( network.wires );
-   closeId( network.resistors );
-   closeId( network.comparators );
-   closeId( network.capacitors );
+   closeId( network.procUnit );
+   closeId( network.weights );
+   closeId( network.connectors );
+   closeId( network.actFunc );
    end;
 
 
@@ -93,14 +82,21 @@ function train( network, vectors )
          w[ j + 1 ] = w[ j + 1 ] / network.neuronsCount;
          end
 
-      setupAnalogResistors( network.resistors, 2 * ( network.neuronsCount - 1 ) * i, network.neuronsCount - 1, w, 2 );
+      setAbstractWeights( network.weights, ( network.neuronsCount - 1 ) * i, w );
       end
    end
 
 
-function computeC( network, x, time, stepsCount )
-   setPotentials( network.wires, 2, x );
-   computeAnalogLimNeuronsC( network.neurons, time, stepsCount );
-   return getPotentials( network.wires, 2, network.neuronsCount );
+function compute( network, x, times )
+   setSignals( network.connectors, 0, x );
+   computeAbstractNeurons( network.neurons, times );
+   return getSignals( network.connectors, 0, network.neuronsCount );
+   end
+
+
+function computeC( network, x, timeConstant, time, stepsCount )
+   setSignals( network.connectors, 0, x );
+   computeAbstractNeuronsC( network.neurons, timeConstant, time, stepsCount );
+   return getSignals( network.connectors, 0, network.neuronsCount );
    end
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -235,14 +235,12 @@ Kernel::Kernel()
    luaL_openlibs( luaVM );
 
    // Set modules path;
-   #ifdef MODULES_PATH
    lua_getglobal( luaVM, "package" );
    lua_getfield( luaVM, -1, "path" );
-   lua_pushstring( luaVM, ";" MODULES_PATH "/?.lua" );
+   lua_pushstring( luaVM, ";" MODULES_PATH );
    lua_concat( luaVM, 2 );
    lua_setfield( luaVM, -2, "path" );
    lua_pop( luaVM, 1 );
-   #endif
 
    // Register API functions;
    registerApiFunctions( luaVM );

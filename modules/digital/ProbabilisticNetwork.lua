@@ -41,9 +41,9 @@ function create( inputs, layer1, layer2 )
    network.neurons = { {}, {} };
    network.actFuncs = { createActFunc( ACT_FUNC.GAUSSIAN, 1.0 ), createActFunc( ACT_FUNC.LINEAR, 1.0, 0.0 ) };
    network.connectorsCount = inputs + layer1 + layer2;
-   network.connectors = createAbstractConnectors( network.connectorsCount );
-   network.weightsCount = inputs * layer1 + layer1 * layer2;
-   network.weights = createAbstractWeights( network.weightsCount );
+   network.connectors = createDigitalConnectors( network.connectorsCount );
+   network.memorySize = inputs * layer1 + layer1 * layer2;
+   network.memory = createMemoryModule( network.memorySize );
    network.procUnits = {
       createProcUnit( PROC_UNIT.RADIAL_BASIS, COEFF_USAGE.NOP ),
       createProcUnit( PROC_UNIT.WEIGHTED_SUM )
@@ -56,11 +56,11 @@ function create( inputs, layer1, layer2 )
       end
 
    for i = 0, layer1 - 1 do
-      network.neurons[ 1 ][ i + 1 ] = createAbstractNeuron(
+      network.neurons[ 1 ][ i + 1 ] = createDigitalNeuron(
          inputs,
          inputConnectors,
          network.connectors, inputs + i,
-         network.weights, inputs * i,
+         network.memory, inputs * i,
          network.procUnits[ 1 ],
          network.actFuncs[ 1 ]
          );
@@ -73,11 +73,11 @@ function create( inputs, layer1, layer2 )
       end
 
    for i = 0, layer2 - 1 do
-      network.neurons[ 2 ][ i + 1 ] = createAbstractNeuron(
+      network.neurons[ 2 ][ i + 1 ] = createDigitalNeuron(
          layer1,
          inputConnectors,
          network.connectors, inputs + layer1 + i,
-         network.weights, inputs * layer1 + layer1 * i,
+         network.memory, inputs * layer1 + layer1 * i,
          network.procUnits[ 2 ],
          network.actFuncs[ 2 ]
          );
@@ -96,7 +96,7 @@ function destroy( network )
 
    closeId( network.procUnits[ 2 ] );
    closeId( network.procUnits[ 1 ] );
-   closeId( network.weights );
+   closeId( network.memory );
    closeId( network.connectors );
    closeId( network.actFuncs[ 2 ] );
    closeId( network.actFuncs[ 1 ] );
@@ -108,22 +108,22 @@ function train( network, vectors )
    local w = {};
    for i = 1, #network.neurons[ 1 ] do
       for j = 1, network.inputs do w[ j ] = vectors[ i ][ 1 ][ j ] end
-      setAbstractWeights( network.weights, network.inputs * ( i - 1 ), w );
+      setDigitalWeights( network.memory, network.inputs * ( i - 1 ), w );
       end
 
    -- Set linear layer weights;
    w = {};
    for i = 1, #network.neurons[ 2 ] do
       for j = 1, #network.neurons[ 1 ] do w[ j ] = vectors[ j ][ 2 ][ i ] end
-      setAbstractWeights( network.neurons[ 2 ][ i ], w );
+      setDigitalWeights( network.neurons[ 2 ][ i ], w );
       end
    end
 
 
 function compute( network, x )
-   setSignals( network.connectors, 0, x );
-   computeAbstractNeurons( network.neurons[ 1 ], 1 );
-   computeAbstractNeurons( network.neurons[ 2 ], 1 );
-   return getWinner( getSignals( network.connectors, network.inputs + #network.neurons[ 1 ], #network.neurons[ 2 ] ) );
+   setValues( network.connectors, 0, x );
+   computeDigitalNeurons( network.neurons[ 1 ], 1 );
+   computeDigitalNeurons( network.neurons[ 2 ], 1 );
+   return getWinner( getValues( network.connectors, network.inputs + #network.neurons[ 1 ], #network.neurons[ 2 ] ) );
    end
 

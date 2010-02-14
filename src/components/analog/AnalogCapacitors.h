@@ -18,44 +18,54 @@
  ***************************************************************************/
 
 
-#include "kernel/KernelObject.h"
+#ifndef ANALOGCAPACITORS_H
+#define ANALOGCAPACITORS_H
 
 
-#include <stdio.h>
-#include <typeinfo>
+#include "components/ComponentsSet.h"
+#include "engine/InterruptManager.h"
+#include "objects/CustomFunction.h"
 
 
 /***************************************************************************
- *   KernelObject abstract class implementation                            *
+ *   AnalogCapacitors class declaration                                    *
  ***************************************************************************/
 
 
-KernelObject::KernelObject()
+class AnalogCapacitors : public ComponentsSet < double >
    {
-   this->referenceCount = 0;
+   public:
+      AnalogCapacitors( unsigned int count = 0 );
+      virtual ~AnalogCapacitors();
    };
 
 
-KernelObject::~KernelObject()
+/***************************************************************************
+ *   AnalogCapacitorsManager class declaration                             *
+ ***************************************************************************/
+
+
+class AnalogCapacitorsManager : public InterruptManager
    {
-   // Do nothing;
+   public:
+      AnalogCapacitorsManager();
+      AnalogCapacitorsManager(
+         Distribution * distribution,
+         AnalogCapacitors * analogCapacitors,
+         CustomFunction * fixFunction
+         );
+
+      virtual ~AnalogCapacitorsManager();
+
+      virtual void simulateInterrupt( unsigned int intSource );
+      virtual void handleInterrupt();
+      virtual void reinit();
+
+   private:
+      AnalogCapacitors * analogCapacitors;
+      CustomFunction * fixFunction;
+      double * backup;
    };
 
 
-void KernelObject::capture()
-   {
-   this->referenceCount ++;
-   };
-
-
-void KernelObject::release()
-   {
-   this->referenceCount --;
-   if ( this->referenceCount == 0 )
-      {
-      //char str[ 256 ];
-      //sprintf( str, "Object %s has been deleted", typeid( * this ).name() );
-      delete this;
-      //printf( "%s\n", str );
-      }
-   };
+#endif

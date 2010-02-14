@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 
-#include "components/abstract/AbstractProcessor.h"
+#include "math/ProcessingUnit.h"
 
 
 #include <math.h>
@@ -64,43 +64,51 @@ inline double useCoefficient( COEFF_USAGE::T_COEFF_USAGE coeffUsage, double x, d
 
 
 /***************************************************************************
- *   AbstractProcessor abstract class implementation                       *
+ *   ProcessingUnit abstract class implementation                          *
  ***************************************************************************/
 
 
-AbstractProcessor::AbstractProcessor()
+ProcessingUnit::ProcessingUnit()
    : KernelObject()
    {
    // Do nothing;
    };
 
 
-AbstractProcessor::~AbstractProcessor()
+ProcessingUnit::~ProcessingUnit()
    {
    // Do nothing;
    };
 
 
 /***************************************************************************
- *   AbstractCustomProcessor class implementation                          *
+ *   CustomProcessingUnit class implementation                             *
  ***************************************************************************/
 
 
-AbstractCustomProcessor::AbstractCustomProcessor( CustomFunction * processingFunc )
-   : AbstractProcessor()
+CustomProcessingUnit::CustomProcessingUnit( CustomFunction * processingFunc )
+   : ProcessingUnit()
    {
    this->processingFunc = processingFunc;
    if ( processingFunc != NULL ) processingFunc->capture();
    };
 
 
-AbstractCustomProcessor::~AbstractCustomProcessor()
+CustomProcessingUnit::CustomProcessingUnit( CustomProcessingUnit & other )
+   : ProcessingUnit( other )
+   {
+   processingFunc = other.processingFunc;
+   if ( processingFunc != NULL ) processingFunc->capture();
+   };
+
+
+CustomProcessingUnit::~CustomProcessingUnit()
    {
    if ( processingFunc != NULL ) processingFunc->release();
    };
 
 
-double AbstractCustomProcessor::process(
+double CustomProcessingUnit::process(
    unsigned int inputsCount,
    unsigned int * inputConnectors,
    AbstractConnectors * connectors,
@@ -118,7 +126,7 @@ double AbstractCustomProcessor::process(
       {
       // Increase key by 1 to provide compatibility between C and Lua-style arrays;
       lua_pushnumber( L, i + 1 );
-      lua_pushnumber( L, connectors->getSignal( inputConnectors[ i ] ) );
+      lua_pushnumber( L, connectors->at( inputConnectors[ i ] ) );
       lua_rawset( L, -3 );
       }
 
@@ -143,7 +151,7 @@ double AbstractCustomProcessor::process(
          {
          // Increase key by 1 to provide compatibility between C and Lua-style arrays;
          lua_pushnumber( L, i + 1 );
-         lua_pushnumber( L, weights->getWeight( weightsBaseIndex + i ) );
+         lua_pushnumber( L, weights->at( weightsBaseIndex + i ) );
          lua_rawset( L, -3 );
          }
       }
@@ -155,25 +163,63 @@ double AbstractCustomProcessor::process(
    };
 
 
+double CustomProcessingUnit::process(
+   unsigned int inputsCount,
+   unsigned int * inputConnectors,
+   DigitalConnectors * connectors,
+   MemoryModule * memory,
+   unsigned int memoryBaseIndex
+   )
+   {
+   lua_State * L = kernel->getVM();
+   lua_rawgeti( L, LUA_REGISTRYINDEX, processingFunc->getFunctionReference() );
+
+   // Push signals array;
+   lua_newtable( L );
+   for ( unsigned int i = 0; i < inputsCount; i ++ )
+      {
+      // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+      lua_pushnumber( L, i + 1 );
+      lua_pushnumber( L, connectors->at( inputConnectors[ i ] ) );
+      lua_rawset( L, -3 );
+      }
+
+   // Push weights array;
+   lua_newtable( L );
+   for ( unsigned int i = 0; i < inputsCount; i ++ )
+      {
+      // Increase key by 1 to provide compatibility between C and Lua-style arrays;
+      lua_pushnumber( L, i + 1 );
+      lua_pushnumber( L, memory->at( memoryBaseIndex + i ) );
+      lua_rawset( L, -3 );
+      }
+
+   lua_pcall( L, 2, 1, 0 );
+   double result = lua_tonumber( L, -1 );
+   lua_pop( L, 1 );
+   return result;
+   };
+
+
 /***************************************************************************
- *   AbstractRadialBasisProcessor class implementation                     *
+ *   RadialBasisProcessingUnit class implementation                        *
  ***************************************************************************/
 
 
-AbstractRadialBasisProcessor::AbstractRadialBasisProcessor( COEFF_USAGE::T_COEFF_USAGE coeffUsage )
-   : AbstractProcessor()
+RadialBasisProcessingUnit::RadialBasisProcessingUnit( COEFF_USAGE::T_COEFF_USAGE coeffUsage )
+   : ProcessingUnit()
    {
    this->coeffUsage = coeffUsage;
    };
 
 
-AbstractRadialBasisProcessor::~AbstractRadialBasisProcessor()
+RadialBasisProcessingUnit::~RadialBasisProcessingUnit()
    {
    // Do nothing;
    };
 
 
-double AbstractRadialBasisProcessor::process(
+double RadialBasisProcessingUnit::process(
    unsigned int inputsCount,
    unsigned int * inputConnectors,
    AbstractConnectors * connectors,
@@ -192,16 +238,13 @@ double AbstractRadialBasisProcessor::process(
       // Use build-in weights;
       for ( unsigned int i = 0; i < inputsCount; i ++ )
          {
-         buffer = builtInWeights[ i ] -
-            connectors->getSignal( inputConnectors[ i ] );
-
+         buffer = builtInWeights[ i ] - connectors->at( inputConnectors[ i ] );
          dist += buffer * buffer;
          }
 
       if ( coeffUsage != COEFF_USAGE::NOP )
          {
-         buffer = builtInWeights[ inputsCount ] *
-            connectors->getSignal( inputConnectors[ inputsCount ] );
+         buffer = builtInWeights[ inputsCount ] * connectors->at( inputConnectors[ inputsCount ] );
          }
       }
    else
@@ -209,16 +252,13 @@ double AbstractRadialBasisProcessor::process(
       // Use external weights;
       for ( unsigned int i = 0; i < inputsCount; i ++ )
          {
-         buffer = weights->getWeight( weightsBaseIndex + i ) -
-            connectors->getSignal( inputConnectors[ i ] );
-
+         buffer = weights->at( weightsBaseIndex + i ) - connectors->at( inputConnectors[ i ] );
          dist += buffer * buffer;
          }
 
       if ( coeffUsage != COEFF_USAGE::NOP )
          {
-         buffer = weights->getWeight( weightsBaseIndex + inputsCount ) *
-            connectors->getSignal( inputConnectors[ inputsCount ] );
+         buffer = weights->at( weightsBaseIndex + inputsCount ) * connectors->at( inputConnectors[ inputsCount ] );
          }
       }
 
@@ -229,25 +269,56 @@ double AbstractRadialBasisProcessor::process(
    };
 
 
+double RadialBasisProcessingUnit::process(
+   unsigned int inputsCount,
+   unsigned int * inputConnectors,
+   DigitalConnectors * connectors,
+   MemoryModule * memory,
+   unsigned int memoryBaseIndex
+   )
+   {
+   if ( coeffUsage != COEFF_USAGE::NOP ) inputsCount --;
+
+   // Calculate distance between input signals and weights;
+   double dist = 0.0;
+   double buffer = 0.0;
+   for ( unsigned int i = 0; i < inputsCount; i ++ )
+      {
+      buffer = memory->at( memoryBaseIndex + i ) - connectors->at( inputConnectors[ i ] );
+      dist += buffer * buffer;
+      }
+
+   if ( coeffUsage != COEFF_USAGE::NOP )
+      {
+      buffer = memory->at( memoryBaseIndex + inputsCount ) * connectors->at( inputConnectors[ inputsCount ] );
+      }
+
+   dist = useCoefficient( coeffUsage, dist, buffer );
+   dist = sqrt( dist );
+
+   return dist;
+   };
+
+
 /***************************************************************************
- *   AbstractScalarProcessor class implementation                          *
+ *   ScalarProcessingUnit class implementation                             *
  ***************************************************************************/
 
 
-AbstractScalarProcessor::AbstractScalarProcessor()
-   : AbstractProcessor()
+ScalarProcessingUnit::ScalarProcessingUnit()
+   : ProcessingUnit()
    {
    // Do nothing;
    };
 
 
-AbstractScalarProcessor::~AbstractScalarProcessor()
+ScalarProcessingUnit::~ScalarProcessingUnit()
    {
    // Do nothing;
    };
 
 
-double AbstractScalarProcessor::process(
+double ScalarProcessingUnit::process(
    unsigned int inputsCount,
    unsigned int * inputConnectors,
    AbstractConnectors * connectors,
@@ -265,7 +336,7 @@ double AbstractScalarProcessor::process(
       // Use build-in weights;
       for ( unsigned int i = 0; i < inputsCount; i ++ )
          {
-         buffer = connectors->getSignal( inputConnectors[ i ] );
+         buffer = connectors->at( inputConnectors[ i ] );
          product += builtInWeights[ i ] * buffer;
          sum += buffer;
          }
@@ -275,8 +346,8 @@ double AbstractScalarProcessor::process(
       // Use external weights;
       for ( unsigned int i = 0; i < inputsCount; i ++ )
          {
-         buffer = connectors->getSignal( inputConnectors[ i ] );
-         product += weights->getWeight( weightsBaseIndex + i ) * buffer;
+         buffer = connectors->at( inputConnectors[ i ] );
+         product += weights->at( weightsBaseIndex + i ) * buffer;
          sum += buffer;
          }
       }
@@ -285,25 +356,48 @@ double AbstractScalarProcessor::process(
    };
 
 
+double ScalarProcessingUnit::process(
+   unsigned int inputsCount,
+   unsigned int * inputConnectors,
+   DigitalConnectors * connectors,
+   MemoryModule * memory,
+   unsigned int memoryBaseIndex
+   )
+   {
+   // Calculate normalized scalar product of input signals and weights;
+   double buffer = 0.0;
+   double product = 0.0;
+   double sum = 0.0;
+   for ( unsigned int i = 0; i < inputsCount; i ++ )
+      {
+      buffer = connectors->at( inputConnectors[ i ] );
+      product += memory->at( memoryBaseIndex + i ) * buffer;
+      sum += buffer;
+      }
+
+   return ( sum != 0.0 ) ? product / sum : 0.0;
+   };
+
+
 /***************************************************************************
- *   AbstractWeightedSumProcessor class implementation                     *
+ *   WeightedSumProcessingUnit class implementation                        *
  ***************************************************************************/
 
 
-AbstractWeightedSumProcessor::AbstractWeightedSumProcessor()
-   : AbstractProcessor()
+WeightedSumProcessingUnit::WeightedSumProcessingUnit()
+   : ProcessingUnit()
    {
    // Do nothing
    };
 
 
-AbstractWeightedSumProcessor::~AbstractWeightedSumProcessor()
+WeightedSumProcessingUnit::~WeightedSumProcessingUnit()
    {
    // Do nothing;
    };
 
 
-double AbstractWeightedSumProcessor::process(
+double WeightedSumProcessingUnit::process(
    unsigned int inputsCount,
    unsigned int * inputConnectors,
    AbstractConnectors * connectors,
@@ -320,7 +414,7 @@ double AbstractWeightedSumProcessor::process(
       for ( unsigned int i = 0; i < inputsCount; i ++ )
          {
          net += builtInWeights[ i ] *
-            connectors->getSignal( inputConnectors[ i ] );
+            connectors->at( inputConnectors[ i ] );
          }
       }
    else
@@ -328,9 +422,27 @@ double AbstractWeightedSumProcessor::process(
       // Use external weights;
       for ( unsigned int i = 0; i < inputsCount; i ++ )
          {
-         net += weights->getWeight( weightsBaseIndex + i ) *
-            connectors->getSignal( inputConnectors[ i ] );
+         net += weights->at( weightsBaseIndex + i ) * connectors->at( inputConnectors[ i ] );
          }
+      }
+
+   return net;
+   };
+
+
+double WeightedSumProcessingUnit::process(
+   unsigned int inputsCount,
+   unsigned int * inputConnectors,
+   DigitalConnectors * connectors,
+   MemoryModule * memory,
+   unsigned int memoryBaseIndex
+   )
+   {
+   // Calculate weighted sum of input signals;
+   double net = 0.0;
+   for ( unsigned int i = 0; i < inputsCount; i ++ )
+      {
+      net += memory->at( memoryBaseIndex + i ) * connectors->at( inputConnectors[ i ] );
       }
 
    return net;

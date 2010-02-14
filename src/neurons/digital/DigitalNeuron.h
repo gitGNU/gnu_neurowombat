@@ -18,32 +18,75 @@
  ***************************************************************************/
 
 
-#ifndef ANALOGCOMPARATORS_H
-#define ANALOGCOMPARATORS_H
+#ifndef DIGITALNEURON_H
+#define DIGITALNEURON_H
 
 
 #include "kernel/KernelObject.h"
-//#include "TransferFunction.h"
+#include "components/digital/DigitalConnectors.h"
+#include "components/digital/MemoryModule.h"
+#include "math/ActivationFunction.h"
+#include "math/ProcessingUnit.h"
 
 
 /***************************************************************************
- *   AnalogComparators class declaration                                   *
+ *   DigitalNeuron class declaration                                       *
  ***************************************************************************/
 
 
-class AnalogComparators : public KernelObject
+class DigitalNeuron : public KernelObject
    {
    public:
-      AnalogComparators( unsigned int count = 0 );
-      ~AnalogComparators();
+      DigitalNeuron(
+         unsigned int inputsCount,
+         unsigned int * inputConnectors,
+         DigitalConnectors * connectors,
+         unsigned int connectorsBaseIndex,
+         MemoryModule * memory,
+         unsigned int memoryBaseIndex,
+         ProcessingUnit * processingUnit,
+         ActivationFunction * activationFunction
+         );
 
-      unsigned int count() const;
+      virtual ~DigitalNeuron();
 
-      double compare( unsigned int index, double neg, double pos );
+      unsigned int getInputsCount() const;
+
+      void setWeight( unsigned int index, double weight );
+      double getWeight( unsigned int index );
+
+      double getOutput();
+
+      void compute();
+
+      void createDampingBuffers();
+
+      void snapDelta( double err );
+      double getDelta();
+      double getWeightedDelta( unsigned int index );
+      void modifyWeights( double damping, double speed );
+
+   protected:
+      DigitalNeuron();
+      DigitalNeuron( const DigitalNeuron & other );
 
    private:
-      unsigned int numComparators;
-      double * analogSignals;
+      unsigned int inputsCount;
+      unsigned int * inputConnectors;
+
+      DigitalConnectors * connectors;
+      unsigned int connectorsBaseIndex;
+
+      MemoryModule * memory;
+      unsigned int memoryBaseIndex;
+
+      double * builtInBuffers;
+
+      ProcessingUnit * processingUnit;
+      ActivationFunction * activationFunction;
+
+      double processingUnitOut;
+      double delta;
    };
 
 

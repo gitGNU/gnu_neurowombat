@@ -1,4 +1,4 @@
---   Copyright (C) 2009 Andrew Timashov
+--   Copyright (C) 2009, 2010 Andrew Timashov
 --
 --   This file is part of NeuroWombat.
 --
@@ -24,18 +24,14 @@ function create( inputs, layer1, layer2 )
    network.inputs = inputs;
    network.neuronsCount = layer1 + layer2;
    network.neurons = { {}, {} };
-   network.activatorsCount = 0;
-   network.activators = 0;
    network.actFuncs = { createActFunc( ACT_FUNC.GAUSSIAN, 1.0 ), createActFunc( ACT_FUNC.LINEAR, 1.0, 0.0 ) };
-   network.buffersCount = 0;
-   network.buffers = 0;
    network.connectorsCount = inputs + 1 + layer1 + layer2;
    network.connectors = createAbstractConnectors( network.connectorsCount );
    network.weightsCount = ( inputs + 1 ) * layer1 + layer1 * layer2;
    network.weights = createAbstractWeights( network.weightsCount );
-   network.processors = {
-      createAbstractProcessor( ABSTRACT_PROCESSOR.RADIAL_BASIS, COEFF_USAGE.MUL_BY ),
-      createAbstractProcessor( ABSTRACT_PROCESSOR.SCALAR )
+   network.procUnits = {
+      createProcUnit( PROC_UNIT.RADIAL_BASIS, COEFF_USAGE.MUL_BY ),
+      createProcUnit( PROC_UNIT.SCALAR )
       };
 
    -- Set 1.0 signal for input'th connector;
@@ -55,8 +51,7 @@ function create( inputs, layer1, layer2 )
          inputConnectors,
          network.connectors, inputs + 1 + i,
          network.weights, ( inputs + 1 ) * i,
-         0, 0,
-         network.processors[ 1 ],
+         network.procUnits[ 1 ],
          network.actFuncs[ 1 ]
          );
       end
@@ -73,8 +68,7 @@ function create( inputs, layer1, layer2 )
          inputConnectors,
          network.connectors, inputs + 1 + layer1 + i,
          network.weights, ( inputs + 1 ) * layer1 + layer1 * i,
-         0, 0,
-         network.processors[ 2 ],
+         network.procUnits[ 2 ],
          network.actFuncs[ 2 ]
          );
       end
@@ -90,8 +84,8 @@ function destroy( network )
          end
       end
 
-   closeId( network.processors[ 2 ] );
-   closeId( network.processors[ 1 ] );
+   closeId( network.procUnits[ 2 ] );
+   closeId( network.procUnits[ 1 ] );
    closeId( network.weights );
    closeId( network.connectors );
    closeId( network.actFuncs[ 2 ] );

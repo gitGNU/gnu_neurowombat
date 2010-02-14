@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -27,118 +27,13 @@
 
 
 AbstractConnectors::AbstractConnectors( unsigned int count )
-   : KernelObject()
+   : ComponentsSet < double >::ComponentsSet( count )
    {
-   this->numWires = count;
-
-   if ( count > 0 )
-      {
-      this->analogSignals = new double[ count ];
-      this->broken = new bool[ count ];
-      this->repareAll();
-      }
-   else
-      {
-      this->analogSignals = NULL;
-      this->broken = NULL;
-      }
+   // Do nothing;
    };
 
 
 AbstractConnectors::~AbstractConnectors()
    {
-   if ( this->analogSignals != NULL ) delete[] this->analogSignals;
-   if ( this->broken != NULL ) delete[] this->broken;
-   };
-
-
-unsigned int AbstractConnectors::count() const
-   {
-   return this->numWires;
-   };
-
-
-void AbstractConnectors::copySignal( unsigned int destIndex, unsigned int srcIndex )
-   {
-   this->analogSignals[ destIndex ] = this->analogSignals[ srcIndex ];
-   };
-
-
-void AbstractConnectors::setSignal( unsigned int index, double signal )
-   {
-   this->analogSignals[ index ] = signal;
-   };
-
-
-double AbstractConnectors::getSignal( unsigned int index ) const
-   {
-   return ( broken[ index ] ) ? 0.0 : this->analogSignals[ index ];
-   };
-
-
-void AbstractConnectors::repareAll()
-   {
-   for ( unsigned int i = 0; i < numWires; i ++ )
-      {
-      this->broken[ i ] = false;
-      }
-   };
-
-
-void AbstractConnectors::breakWire( unsigned int index )
-   {
-   this->broken[ index ] = true;
-   };
-
-
-void AbstractConnectors::repareWire( unsigned int index )
-   {
-   this->broken[ index ] = false;
-   };
-
-
-/***************************************************************************
- *   AbstractConnectorsManager class implementation                        *
- ***************************************************************************/
-
-
-/*AnalogWiresManager::AnalogWiresManager()
-   : InterruptManager()
-   {
    // Do nothing;
    };
-
-
-AnalogWiresManager::AnalogWiresManager(
-   Destribution & destribution,
-   AnalogWires * analogWires
-   )
-   : InterruptManager(
-      ( analogWires != NULL ) ? analogWires->getNumWires() : 0,
-      false,
-      destribution,
-      analogWires
-      )
-   {
-   // Do nothing;
-   };
-
-
-AnalogWiresManager::~AnalogWiresManager()
-   {
-   // Do nothing;
-   };
-
-
-void AnalogWiresManager::handleInterrupt()
-   {
-   // Break up wire;
-   int wireIndex = this->getIntSource();
-   if ( wireIndex >= 0 && this->entity != NULL )
-      {
-      ( ( AnalogWires * ) this->entity )->breakWire( wireIndex );
-      }
-
-   // Pass control to base implementation;
-   InterruptManager::handleInterrupt();
-   };*/

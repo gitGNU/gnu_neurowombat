@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -22,8 +22,7 @@
 #define ANALOGWIRES_H
 
 
-#include "kernel/KernelObject.h"
-//#include "InterruptManager.h"
+#include "components/ComponentsSet.h"
 
 
 /***************************************************************************
@@ -31,42 +30,12 @@
  ***************************************************************************/
 
 
-class AnalogWires : public KernelObject
+class AnalogWires : public ComponentsSet < double >
    {
    public:
       AnalogWires( unsigned int count = 0 );
-      ~AnalogWires();
-
-      unsigned int count() const;
-
-      void copyPotential( unsigned int destIndex, unsigned int srcIndex );
-      void setPotential( unsigned int index, double potential );
-      virtual double getPotential( unsigned int index ) const;
-
-   private:
-      unsigned int numWires;
-      double * electricPotentials;
+      virtual ~AnalogWires();
    };
-
-
-/***************************************************************************
- *   AnalogWiresManager class declaration                                  *
- ***************************************************************************/
-
-
-/*class AnalogWiresManager : public InterruptManager
-   {
-   public:
-      AnalogWiresManager();
-      AnalogWiresManager(
-         Destribution & destribution,
-         AnalogWires * analogWires
-         );
-
-      virtual ~AnalogWiresManager();
-
-      virtual void handleInterrupt();
-   };*/
 
 
 #endif

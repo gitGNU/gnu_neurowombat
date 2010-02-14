@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -35,6 +35,8 @@ AnalogNeuron::AnalogNeuron(
    unsigned int * inputWires,
    unsigned int gndWireIndex,
    unsigned int srcWireIndex,
+   AnalogCapacitors * capacitors,
+   unsigned int capacitorsBaseIndex,
    AnalogComparators * comparators,
    unsigned int comparatorsBaseIndex,
    AnalogResistors * resistors,
@@ -72,6 +74,10 @@ AnalogNeuron::AnalogNeuron(
    this->gndWireIndex = gndWireIndex;
    this->srcWireIndex = srcWireIndex;
 
+   this->capacitors = capacitors;
+   this->capacitorsBaseIndex = capacitorsBaseIndex;
+   if ( capacitors != NULL ) capacitors->capture();
+
    this->comparators = comparators;
    this->comparatorsBaseIndex = comparatorsBaseIndex;
    if ( comparators != NULL ) comparators->capture();
@@ -91,6 +97,7 @@ AnalogNeuron::~AnalogNeuron()
    if ( this->inputWires != NULL ) delete[] this->inputWires;
 
    // Release captured objects;
+   if ( capacitors != NULL ) capacitors->release();
    if ( comparators != NULL ) comparators->release();
    if ( resistors != NULL ) resistors->release();
    if ( wires != NULL ) wires->release();
@@ -115,154 +122,131 @@ unsigned int AnalogNeuron::getResistorsBaseIndex() const
    };
 
 
+double AnalogNeuron::getPosConstant()
+   {
+   // Calculate positive branch resistances products;
+   double posProduct = 1.0;
+   for ( unsigned int i = 0; i < numInputs; i ++ )
+      {
+      double resistance = this->resistors->at( this->resistorsBaseIndex + i );
+      if ( resistance != 0.0 ) posProduct *= resistance;
+      }
+
+   posProduct = fabs( posProduct );
+
+   // Calculate positive constant;
+   double posConstant = 0.0;
+   for ( unsigned int i = 0; i < numInputs; i ++ )
+      {
+      double resistance = this->resistors->at( this->resistorsBaseIndex + i );
+      if ( resistance != 0.0 ) posConstant += posProduct / fabs( resistance );
+      }
+
+   if ( posConstant != 0.0 ) posConstant =
+      posProduct * capacitors->at( capacitorsBaseIndex ) / posConstant;
+
+   return posConstant;
+   };
+
+
+double AnalogNeuron::getNegConstant()
+   {
+   // Calculate negative branch resistances products;
+   double negProduct = 1.0;
+   for ( unsigned int i = 0; i < numInputs; i ++ )
+      {
+      double resistance = this->resistors->at( this->resistorsBaseIndex + numInputs + i );
+      if ( resistance != 0.0 ) negProduct *= resistance;
+      }
+
+   negProduct = fabs( negProduct );
+
+   // Calculate negative constant;
+   double negConstant = 0.0;
+   for ( unsigned int i = 0; i < numInputs; i ++ )
+      {
+      double resistance = this->resistors->at( this->resistorsBaseIndex + numInputs + i );
+      if ( resistance != 0.0 ) negConstant += negProduct / fabs( resistance );
+      }
+
+   if ( negConstant != 0.0 ) negConstant =
+      negProduct * capacitors->at( capacitorsBaseIndex + 1 ) / negConstant;
+
+   return negConstant;
+   };
+
+
+double AnalogNeuron::leftComputePos()
+   {
+   return calcPotencial( capacitorsBaseIndex, resistorsBaseIndex );
+   };
+
+
+double AnalogNeuron::leftComputeNeg()
+   {
+   return - calcPotencial( capacitorsBaseIndex + 1, resistorsBaseIndex + numInputs );
+   };
+
+
+void AnalogNeuron::rightCompute( double negPotential, double posPotential )
+   {
+   wires->at( wiresBaseIndex ) = comparators->compare( comparatorsBaseIndex, negPotential, posPotential );
+   };
+
+
 void AnalogNeuron::compute()
    {
-   if ( this->comparators != NULL )
+   if ( comparators != NULL )
       {
-      /*double net = 0.0;
-
-      for ( unsigned int i = 0; i < numInputs; i ++ )
-         {
-         double x = this->wires->getSignal( this->inputWireIndexis[ i ] );
-         double w = this->resistors->getResistance( this->resistorsBaseIndex + i );
-         net += x * w;
-         }
-
-      if ( net > 0 )
-         {
-         this->wires->setSignal( this->wiresBaseIndex, 1.0 );
-         }
-      else
-         {
-         this->wires->setSignal( this->wiresBaseIndex, -1.0 );
-         }*/
-
-
-      // Calculate positive and negative branch resistance products and sums;
-      double posProduct = 1.0;
-      double negProduct = 1.0;
-      double posSum = 0.0;
-      double negSum = 0.0;
-      unsigned int numNonZeroPosResistances = 0;
-      unsigned int numNonZeroNegResistances = 0;
-      for ( unsigned int i = 0; i < numInputs; i ++ )
-         {
-         double resistance = fabs( this->resistors->getResistance( this->resistorsBaseIndex + i ) );
-         posSum += resistance;
-         if ( resistance != 0.0 )
-            {
-            numNonZeroPosResistances ++;
-            posProduct *= resistance;
-            }
-
-         resistance = fabs( this->resistors->getResistance( this->resistorsBaseIndex + numInputs + i ) );
-         negSum += resistance;
-         if ( resistance != 0.0 )
-            {
-            numNonZeroNegResistances ++;
-            negProduct *= resistance;
-            }
-         }
-
-      // Divide products over sums;
-      posProduct /= posSum;
-      negProduct /= negSum;
-
-      // Calculate positive and negative potentials;
-      double posPotential = 0.0;
-      double negPotential = 0.0;
-
-      for ( unsigned int i = 0; i < numInputs; i ++ )
-         {
-         double inputVoltage = this->wires->getPotential( this->inputWires[ i ] );
-
-         double resistance = this->resistors->getResistance( this->resistorsBaseIndex + i );
-         if ( resistance != 0.0 )
-            {
-            if ( numNonZeroPosResistances > 1 )
-               {
-               posPotential += ( ( posProduct / resistance ) * inputVoltage );
-               }
-            else
-               {
-               posPotential = ( resistance > 0 ) ? inputVoltage : - inputVoltage;
-               }
-            }
-
-         resistance = this->resistors->getResistance( this->resistorsBaseIndex + numInputs + i );
-         if ( resistance != 0.0 )
-            {
-            if ( numNonZeroNegResistances > 1 )
-               {
-               negPotential -= ( ( negProduct / resistance ) * inputVoltage );
-               }
-            else
-               {
-               negPotential = ( resistance > 0 ) ? - inputVoltage : inputVoltage;
-               }
-            }
-         }
+      // Calculate potentials;
+      double posPotential = calcPotencial( capacitorsBaseIndex, resistorsBaseIndex );
+      double negPotential = - calcPotencial( capacitorsBaseIndex + 1, resistorsBaseIndex + numInputs );
 
       // Transfer positive and negative potentials through the comparator to obtain output voltage;
-      this->wires->setPotential(
-         this->wiresBaseIndex,
-         this->comparators->compare( this->comparatorsBaseIndex, negPotential, posPotential )
-         );
+      wires->at( wiresBaseIndex ) = comparators->compare( comparatorsBaseIndex, negPotential, posPotential );
       }
    else
       {
-      /*double net = 0.0;
-
-      for ( unsigned int i = 0; i < numInputs; i ++ )
-         {
-         double x = this->wires->getSignal( this->inputWireIndexis[ i ] );
-         double w = this->resistors->getResistance( this->resistorsBaseIndex + i );
-         net += x * w;
-         }
-
-      this->wires->setSignal( this->wiresBaseIndex, net );*/
-
-
-      // Calculate resistance products and sums;
-      double product = 1.0;
-      double sum = 0.0;
-      unsigned int numNonZeroResistances = 0;
-      for ( unsigned int i = 0; i < numInputs; i ++ )
-         {
-         double resistance = fabs( this->resistors->getResistance( this->resistorsBaseIndex + i ) );
-         sum += resistance;
-         if ( resistance != 0.0 )
-            {
-            numNonZeroResistances ++;
-            product *= resistance;
-            }
-         }
-
-      // Divide product over sum;
-      product /= sum;
-
       // Calculate potential;
-      double potential = 0.0;
-
-      for ( unsigned int i = 0; i < numInputs; i ++ )
-         {
-         double inputVoltage = this->wires->getPotential( this->inputWires[ i ] );
-
-         double resistance = this->resistors->getResistance( this->resistorsBaseIndex + i );
-         if ( resistance != 0.0 )
-            {
-            if ( numNonZeroResistances > 1 )
-               {
-               potential += ( ( product / resistance ) * inputVoltage );
-               }
-            else
-               {
-               potential = ( resistance > 0 ) ? inputVoltage : - inputVoltage;
-               }
-            }
-         }
+      double potential = calcPotencial( capacitorsBaseIndex, resistorsBaseIndex );
 
       // Transfer potential;
-      this->wires->setPotential( this->wiresBaseIndex, potential );
+      wires->at( wiresBaseIndex ) = potential;
       }
+   };
+
+
+double AnalogNeuron::calcPotencial( unsigned int capacitorsBaseIndex, unsigned int resistorsBaseIndex )
+   {
+   double potential = wires->at( gndWireIndex );
+   if ( capacitors->at( capacitorsBaseIndex ) != 0.0 )
+      {
+      // Calculate resistances product;
+      double product = 1.0;
+      for ( unsigned int i = 0; i < numInputs; i ++ )
+         {
+         double resistance = resistors->at( resistorsBaseIndex + i );
+         if ( resistance != 0.0 ) product *= resistance;
+         }
+
+      product = fabs( product );
+
+      // Calculate potential;
+      double sum = 0.0;
+      for ( unsigned int i = 0; i < numInputs; i ++ )
+         {
+         double resistance = resistors->at( resistorsBaseIndex + i );
+         if ( resistance != 0.0 )
+            {
+            double multiplyer = product / resistance;
+            potential += multiplyer * wires->at( inputWires[ i ] );
+            sum += fabs( multiplyer );
+            }
+         }
+
+      // Divide potential over sum;
+      if ( sum != 0.0 ) potential /= sum;
+      }
+
+   return potential;
    };

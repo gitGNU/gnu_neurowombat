@@ -54,16 +54,16 @@ function create( inputs, neurons )
    network.neurons = {};
    network.actFunc = createActFunc( ACT_FUNC.LINEAR, 1.0, 0.0 );
    network.connectorsCount = inputs + 1 + neurons;
-   network.connectors = createAbstractConnectors( network.connectorsCount );
-   network.weightsCount = ( inputs + 1 ) * neurons;
-   network.weights = createAbstractWeights( network.weightsCount );
+   network.connectors = createDigitalConnectors( network.connectorsCount );
+   network.memorySize = ( inputs + 1 ) * neurons;
+   network.memory = createMemoryModule( network.memorySize );
    network.procUnit = createProcUnit( PROC_UNIT.RADIAL_BASIS, COEFF_USAGE.ADD_TO );
 
-   -- Set 1.0 signal for input'th connector;
-   setSignals( network.connectors, inputs, { 1.0 } );
+   -- Set 1.0 value for input'th connector;
+   setValues( network.connectors, inputs, { 1.0 } );
 
    -- Create neurons layer;
-   local inputConnectors = {};
+   inputConnectors = {};
    for i = 1, inputs do
       inputConnectors[ i ] = i - 1;
       end
@@ -71,11 +71,11 @@ function create( inputs, neurons )
    inputConnectors[ inputs + 1 ] = inputs;
 
    for i = 0, neurons - 1 do
-      network.neurons[ i + 1 ] = createAbstractNeuron(
+      network.neurons[ i + 1 ] = createDigitalNeuron(
          inputs + 1,
          inputConnectors,
          network.connectors, inputs + 1 + i,
-         network.weights, ( inputs + 1 ) * i,
+         network.memory, ( inputs + 1 ) * i,
          network.procUnit,
          network.actFunc
          );
@@ -91,7 +91,7 @@ function destroy( network )
       end
 
    closeId( network.procUnit );
-   closeId( network.weights );
+   closeId( network.memory );
    closeId( network.connectors );
    closeId( network.actFunc );
    end;
@@ -106,7 +106,7 @@ function train( network, vectors, epochs, wSpeed, bSpeed )
       end
 
    for i = 1, network.neuronsCount do
-      setAbstractWeights( network.neurons[ i ], w );
+      setDigitalWeights( network.neurons[ i ], w );
       end
 
    -- Setup activity parameters;
@@ -119,7 +119,7 @@ function train( network, vectors, epochs, wSpeed, bSpeed )
       winner = compute( network, vectors[ i % #vectors + 1 ] );
 
       for j = 1, network.neuronsCount do
-         w = getAbstractWeights( network.neurons[ j ] );
+         w = getDigitalWeights( network.neurons[ j ] );
 
          if j == winner then
             -- Modify weights;
@@ -133,15 +133,15 @@ function train( network, vectors, epochs, wSpeed, bSpeed )
          end
 
          w[ network.inputs + 1 ] = math.exp( 1.0 - math.log( c[ j ] ) );
-         setAbstractWeights( network.neurons[ j ], w );
+         setDigitalWeights( network.neurons[ j ], w );
          end
       end
    end
 
 
 function compute( network, x )
-   setSignals( network.connectors, 0, x );
-   computeAbstractNeurons( network.neurons, 1 );
-   return getWinner( getSignals( network.connectors, network.inputs + 1, network.neuronsCount ) );
+   setValues( network.connectors, 0, x );
+   computeDigitalNeurons( network.neurons, 1 );
+   return getWinner( getValues( network.connectors, network.inputs + 1, network.neuronsCount ) );
    end
 

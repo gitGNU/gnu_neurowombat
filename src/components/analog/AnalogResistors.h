@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 Andrew Timashov                                    *
+ *   Copyright (C) 2009, 2010 Andrew Timashov                              *
  *                                                                         *
  *   This file is part of NeuroWombat.                                     *
  *                                                                         *
@@ -22,7 +22,7 @@
 #define ANALOGRESISTORS_H
 
 
-#include "kernel/KernelObject.h"
+#include "components/ComponentsSet.h"
 #include "engine/InterruptManager.h"
 #include "objects/CustomFunction.h"
 
@@ -32,20 +32,11 @@
  ***************************************************************************/
 
 
-class AnalogResistors : public KernelObject
+class AnalogResistors : public ComponentsSet < double >
    {
    public:
       AnalogResistors( unsigned int count = 0 );
-      ~AnalogResistors();
-
-      unsigned int count() const;
-
-      void setResistance( unsigned int index, double resistance );
-      double getResistance( unsigned int index ) const;
-
-   private:
-      unsigned int numResistors;
-      double * resistances;
+      virtual ~AnalogResistors();
    };
 
 
@@ -59,7 +50,7 @@ class AnalogResistorsManager : public InterruptManager
    public:
       AnalogResistorsManager();
       AnalogResistorsManager(
-         Destribution * destribution,
+         Distribution * distribution,
          AnalogResistors * analogResistors,
          CustomFunction * fixFunction
          );
@@ -73,7 +64,7 @@ class AnalogResistorsManager : public InterruptManager
    private:
       AnalogResistors * analogResistors;
       CustomFunction * fixFunction;
-      double * resistancesBackup;
+      double * backup;
    };
 
 
