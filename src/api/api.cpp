@@ -1607,7 +1607,6 @@ int createSimulationEngine( lua_State * L )
 
 int appendInterruptManager( lua_State * L )
    {
-   KernelObjectId id = 0;
    KernelObject * object = NULL;
 
    // Read engine argument;

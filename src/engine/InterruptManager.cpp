@@ -59,7 +59,7 @@ InterruptManager::InterruptManager(
       if ( distribution != NULL ) distribution->capture();
 
       // Generate interrupts;
-      for ( int i = 0; i < intSourcesCount; i ++ )
+      for ( unsigned int i = 0; i < intSourcesCount; i ++ )
          {
          this->interrupts[ i ] = this->distribution->generateTime();
          }
@@ -151,7 +151,7 @@ void InterruptManager::reinit()
    this->interruptsCount = 0;
 
    // Generate interrupts;
-   for ( int i = 0; i < intSourcesCount; i ++ )
+   for ( unsigned int i = 0; i < intSourcesCount; i ++ )
       {
       this->interrupts[ i ] = this->distribution->generateTime();
       }
@@ -178,7 +178,7 @@ void InterruptManager::findOutIntSource()
    double min = -1.0;
    this->intSource = -1;
 
-   int i = 0;
+   unsigned int i = 0;
 
    // Initialize minimum;
    while ( i < intSourcesCount )

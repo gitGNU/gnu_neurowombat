@@ -72,4 +72,5 @@ int main( int argc, char ** argv )
    kernel = Kernel::instance();
    kernel->doFile( argv[ 1 ] );
    kernel->freeInstance();
+   return EXIT_SUCCESS;
    };
